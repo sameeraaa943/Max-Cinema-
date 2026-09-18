@@ -5,8 +5,8 @@
 (function (window, document) {
   'use strict';
 
-  // Config: Set your Render backend API URL here or via window.CINESCOPE_API
-  var API_BASE = window.CINESCOPE_API || 'https://cinescope-api.onrender.com';
+  // Config: Live Render backend API URL
+  var API_BASE = window.CINESCOPE_API || 'https://cinescope-api-9ukz.onrender.com';
   var ENDPOINT = API_BASE + '/api/public/analytics/event';
 
   // Session ID stored in sessionStorage (persists across page reloads in the same tab)

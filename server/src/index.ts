@@ -94,6 +94,18 @@ app.get('/health', async (_req, res) => {
 });
 
 // ── Public Routes (no auth) ───────────────────────────────────────────────
+const ANALYTICS_SCRIPT = `/**
+ * CineScope Custom Analytics Tracker
+ * Embedded on public movie website: https://cinescopecodespactor.netlify.app
+ */
+(function(window,document){'use strict';var API_BASE=window.CINESCOPE_API||'https://cinescope-api-9ukz.onrender.com';var ENDPOINT=API_BASE+'/api/public/analytics/event';var SESSION_KEY='cinescope_session_id';function getSessionId(){try{var sid=sessionStorage.getItem(SESSION_KEY);if(!sid){sid='cs_'+Math.random().toString(36).substring(2,11)+'_'+Date.now().toString(36);sessionStorage.setItem(SESSION_KEY,sid);}return sid;}catch(e){return'anonymous';}}function sendEvent(payload){payload.sessionId=getSessionId();payload.url=window.location.href;payload.path=window.location.pathname;payload.referrer=document.referrer||null;payload.screen=window.innerWidth+'x'+window.innerHeight;var body=JSON.stringify(payload);if(navigator.sendBeacon){var blob=new Blob([body],{type:'application/json'});navigator.sendBeacon(ENDPOINT,blob);}else{fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}).catch(function(){});}}window.cinescope={track:function(eventName,metadata){sendEvent({event:eventName,metadata:metadata});},trackMovieView:function(movieId,title){sendEvent({event:'movie_view',contentId:movieId,contentType:'movie',metadata:{title:title}});},trackTVView:function(tvShowId,title){sendEvent({event:'tv_show_view',contentId:tvShowId,contentType:'tv_show',metadata:{title:title}});},trackSearch:function(query){if(!query||!query.trim())return;sendEvent({event:'search',searchQuery:query.trim()});},trackClick:function(type,contentId){sendEvent({event:type+'_click',contentId:contentId});}};sendEvent({event:'page_view'});var originalPushState=history.pushState;if(originalPushState){history.pushState=function(){originalPushState.apply(this,arguments);setTimeout(function(){sendEvent({event:'page_view'});},50);};}})(window,document);`;
+
+app.get('/cinescope-analytics.js', (_req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.send(ANALYTICS_SCRIPT);
+});
+
 app.use('/api/public', publicRouter);
 
 // ── Auth Routes ────────────────────────────────────────────────────────────
