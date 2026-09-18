@@ -58,12 +58,12 @@ authRouter.post('/login', authLimiter, async (req, res: Response): Promise<void>
       data: { lastLoginAt: new Date() },
     });
 
-    // Set HttpOnly cookie
+    // Set cross-site cookie (Netlify frontend -> Render backend)
     const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('cinescope_token', token, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/',
     });
@@ -88,7 +88,13 @@ authRouter.post('/login', authLimiter, async (req, res: Response): Promise<void>
 
 // POST /api/auth/logout
 authRouter.post('/logout', (_req, res: Response): void => {
-  res.clearCookie('cinescope_token', { path: '/' });
+  const isProduction = process.env.NODE_ENV === 'production';
+  res.clearCookie('cinescope_token', {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/',
+  });
   res.json({ success: true, message: 'Logged out successfully' });
 });
 

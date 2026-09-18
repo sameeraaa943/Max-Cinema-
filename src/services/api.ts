@@ -8,11 +8,29 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// Request interceptor — attach Bearer token for cross-origin setups
+api.interceptors.request.use((config) => {
+  try {
+    const token = localStorage.getItem('cinescope_token');
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch {
+    // Ignore storage access errors
+  }
+  return config;
+});
+
 // Response interceptor — handle 401 globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      try {
+        localStorage.removeItem('cinescope_token');
+      } catch {
+        // ignore
+      }
       // Clear local auth state and redirect to login
       window.dispatchEvent(new CustomEvent('auth:unauthorized'));
     }
@@ -22,9 +40,25 @@ api.interceptors.response.use(
 
 // ── Auth ──────────────────────────────────────────────────────────────────
 export const authApi = {
-  login: (email: string, password: string) =>
-    api.post('/api/auth/login', { email, password }),
-  logout: () => api.post('/api/auth/logout'),
+  login: async (email: string, password: string) => {
+    const res = await api.post('/api/auth/login', { email, password });
+    if (res.data?.data?.token) {
+      try {
+        localStorage.setItem('cinescope_token', res.data.data.token);
+      } catch {
+        // ignore
+      }
+    }
+    return res;
+  },
+  logout: async () => {
+    try {
+      localStorage.removeItem('cinescope_token');
+    } catch {
+      // ignore
+    }
+    return api.post('/api/auth/logout');
+  },
   me: () => api.get('/api/auth/me'),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post('/api/auth/change-password', { currentPassword, newPassword }),

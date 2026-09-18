@@ -26,29 +26,44 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ── CORS ──────────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.CORS_ORIGINS || '')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
+const allowedOrigins = [
+  'https://maxcinema-adminpanel.netlify.app',
+  'https://cinescopecodespactor.netlify.app',
+  ...(process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean),
+];
 
 // In development allow localhost
 if (process.env.NODE_ENV !== 'production') {
   allowedOrigins.push('http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000');
 }
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow no-origin requests (curl, mobile apps in dev)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error(`CORS: Origin ${origin} not allowed`));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    // Explicitly allowed origin
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+
+    // Allow all Netlify deployments (*.netlify.app)
+    if (origin.endsWith('.netlify.app')) return callback(null, true);
+
+    // Allow local development ports
+    if (origin.startsWith('http://localhost:')) return callback(null, true);
+
+    console.warn(`[CORS Blocked] Origin not allowed: ${origin}`);
+    callback(new Error(`CORS: Origin ${origin} not allowed`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // ── Security ──────────────────────────────────────────────────────────────
 app.use(
