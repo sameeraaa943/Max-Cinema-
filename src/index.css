@@ -1,0 +1,190 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-primary: #070707;
+  --color-bg-card: #121212;
+  --color-bg-secondary: #0D0D0D;
+  --color-border: #242424;
+  --color-gold: #D4AF37;
+  --color-gold-dark: #C5A028;
+  --color-gold-muted: rgba(212, 175, 55, 0.15);
+  --color-white: #FFFFFF;
+  --color-muted: #8A8A8A;
+  --font-inter: 'Inter', sans-serif;
+  --font-cinzel: 'Cinzel', serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #070707;
+  color: #FFFFFF;
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #0D0D0D;
+}
+::-webkit-scrollbar-thumb {
+  background: #242424;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D4AF37;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(18, 18, 18, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(36, 36, 36, 0.8);
+}
+
+/* Gold gradient text */
+.gold-text {
+  background: linear-gradient(135deg, #D4AF37 0%, #F0D060 50%, #C5A028 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Cinzel font */
+.font-cinzel {
+  font-family: 'Cinzel', serif;
+}
+
+/* Shimmer animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #121212 25%, #1a1a1a 50%, #121212 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Fade in animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+/* Stagger delays */
+.delay-100 { animation-delay: 0.1s; opacity: 0; }
+.delay-200 { animation-delay: 0.2s; opacity: 0; }
+.delay-300 { animation-delay: 0.3s; opacity: 0; }
+.delay-400 { animation-delay: 0.4s; opacity: 0; }
+.delay-500 { animation-delay: 0.5s; opacity: 0; }
+.delay-600 { animation-delay: 0.6s; opacity: 0; }
+.delay-700 { animation-delay: 0.7s; opacity: 0; }
+.delay-800 { animation-delay: 0.8s; opacity: 0; }
+
+/* Count up animation */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.count-up {
+  animation: countUp 0.8s ease forwards;
+}
+
+/* Pulse glow */
+@keyframes pulseGold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(212, 175, 55, 0); }
+}
+
+.pulse-gold {
+  animation: pulseGold 2s infinite;
+}
+
+/* Sidebar transition */
+.sidebar-transition {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card hover */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(212, 175, 55, 0.08);
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+/* Button hover */
+.btn-gold {
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.06));
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+.btn-gold:hover {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.12));
+  border-color: rgba(212, 175, 55, 0.6);
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.15);
+}
+
+/* Status dot */
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.status-online {
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+/* Chart tooltip custom */
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+
+/* Active nav item */
+.nav-active {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.05));
+  border-left: 2px solid #D4AF37;
+}
+
+/* Dropdown animation */
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.dropdown-animate {
+  animation: dropdownFade 0.15s ease forwards;
+}

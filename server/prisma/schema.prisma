@@ -1,0 +1,421 @@
+// This is your Prisma schema file for CineScope Admin Dashboard
+// Database: Supabase PostgreSQL
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ── Enums ─────────────────────────────────────────────────────────────────
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum ContentStatus {
+  ACTIVE
+  INACTIVE
+  DRAFT
+}
+
+enum ContentType {
+  MOVIE
+  TV_SHOW
+}
+
+enum TVStatus {
+  RETURNING
+  ENDED
+  CANCELED
+  UPCOMING
+}
+
+enum CollectionVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum SectionType {
+  HERO
+  FEATURED
+  TRENDING
+  POPULAR_MOVIES
+  POPULAR_TV
+  NEW_RELEASES
+  COLLECTIONS
+  RECOMMENDED
+  CUSTOM
+}
+
+enum AdPlacement {
+  HEADER
+  HOMEPAGE
+  MOVIE_PAGE
+  TV_PAGE
+  SEARCH_RESULTS
+  BETWEEN_CONTENT
+  FOOTER
+}
+
+enum AdDeviceTarget {
+  ALL
+  DESKTOP
+  MOBILE
+  TABLET
+}
+
+enum AnalyticsEventType {
+  page_view
+  movie_view
+  tv_show_view
+  search
+  featured_click
+  trending_click
+  trailer_click
+  collection_view
+}
+
+// ── AdminUser ─────────────────────────────────────────────────────────────
+
+model AdminUser {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  role         AdminRole  @default(ADMIN)
+  active       Boolean    @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  auditLogs    AuditLog[]
+
+  @@index([email])
+  @@map("admin_users")
+}
+
+// ── Genre ─────────────────────────────────────────────────────────────────
+
+model Genre {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  tmdbId    Int?     @unique
+  createdAt DateTime @default(now())
+
+  movies   MovieGenre[]
+  tvShows  TVShowGenre[]
+
+  @@map("genres")
+}
+
+// ── Movie ─────────────────────────────────────────────────────────────────
+
+model Movie {
+  id            String        @id @default(cuid())
+  title         String
+  originalTitle String?
+  description   String?
+  posterUrl     String?
+  backdropUrl   String?
+  releaseDate   DateTime?
+  runtime       Int?
+  rating        Float?
+  imdbId        String?       @unique
+  tmdbId        Int?          @unique
+  director      String?
+  cast          String[]      @default([])
+  language      String?
+  country       String?
+  trailerUrl    String?
+  videoUrl      String?
+  status        ContentStatus @default(ACTIVE)
+  featured      Boolean       @default(false)
+  trending      Boolean       @default(false)
+  tags          String[]      @default([])
+  viewCount     Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  genres          MovieGenre[]
+  featuredItems   FeaturedItem[]
+  trendingItems   TrendingItem[]
+  collectionItems CollectionItem[]
+  analyticsEvents AnalyticsEvent[]
+  heroConfigs     HomepageConfig[] @relation("HeroMovie")
+
+  @@index([title])
+  @@index([status])
+  @@index([featured])
+  @@index([trending])
+  @@index([tmdbId])
+  @@map("movies")
+}
+
+model MovieGenre {
+  movieId  String
+  genreId  String
+  movie    Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  genre    Genre  @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([movieId, genreId])
+  @@map("movie_genres")
+}
+
+// ── TVShow ────────────────────────────────────────────────────────────────
+
+model TVShow {
+  id            String        @id @default(cuid())
+  title         String
+  originalTitle String?
+  description   String?
+  posterUrl     String?
+  backdropUrl   String?
+  firstAirDate  DateTime?
+  lastAirDate   DateTime?
+  rating        Float?
+  imdbId        String?       @unique
+  tmdbId        Int?          @unique
+  creator       String?
+  cast          String[]      @default([])
+  language      String?
+  country       String?
+  trailerUrl    String?
+  status        ContentStatus @default(ACTIVE)
+  tvStatus      TVStatus      @default(RETURNING)
+  featured      Boolean       @default(false)
+  trending      Boolean       @default(false)
+  tags          String[]      @default([])
+  viewCount     Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  genres          TVShowGenre[]
+  featuredItems   FeaturedItem[]
+  trendingItems   TrendingItem[]
+  collectionItems CollectionItem[]
+  analyticsEvents AnalyticsEvent[]
+  heroConfigs     HomepageConfig[] @relation("HeroTVShow")
+
+  @@index([title])
+  @@index([status])
+  @@index([featured])
+  @@index([trending])
+  @@index([tmdbId])
+  @@map("tv_shows")
+}
+
+model TVShowGenre {
+  tvShowId String
+  genreId  String
+  tvShow   TVShow @relation(fields: [tvShowId], references: [id], onDelete: Cascade)
+  genre    Genre  @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([tvShowId, genreId])
+  @@map("tv_show_genres")
+}
+
+// ── Featured ──────────────────────────────────────────────────────────────
+
+model FeaturedItem {
+  id           String      @id @default(cuid())
+  contentType  ContentType
+  movieId      String?
+  tvShowId     String?
+  displayOrder Int         @default(0)
+  enabled      Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  movie  Movie?  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  tvShow TVShow? @relation(fields: [tvShowId], references: [id], onDelete: Cascade)
+
+  @@index([enabled])
+  @@index([displayOrder])
+  @@map("featured_items")
+}
+
+// ── Trending ──────────────────────────────────────────────────────────────
+
+model TrendingItem {
+  id            String      @id @default(cuid())
+  contentType   ContentType
+  movieId       String?
+  tvShowId      String?
+  rank          Int         @default(0)
+  trendingScore Float       @default(0)
+  enabled       Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  movie  Movie?  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  tvShow TVShow? @relation(fields: [tvShowId], references: [id], onDelete: Cascade)
+
+  @@index([rank])
+  @@index([enabled])
+  @@map("trending_items")
+}
+
+// ── Collection ────────────────────────────────────────────────────────────
+
+model Collection {
+  id              String               @id @default(cuid())
+  name            String
+  description     String?
+  coverImage      String?
+  backgroundImage String?
+  slug            String               @unique
+  visibility      CollectionVisibility @default(PUBLIC)
+  featured        Boolean              @default(false)
+  displayOrder    Int                  @default(0)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  items CollectionItem[]
+
+  @@index([slug])
+  @@index([visibility])
+  @@map("collections")
+}
+
+model CollectionItem {
+  id           String      @id @default(cuid())
+  collectionId String
+  contentType  ContentType
+  movieId      String?
+  tvShowId     String?
+  displayOrder Int         @default(0)
+  createdAt    DateTime    @default(now())
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  movie      Movie?     @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  tvShow     TVShow?    @relation(fields: [tvShowId], references: [id], onDelete: Cascade)
+
+  @@index([collectionId])
+  @@map("collection_items")
+}
+
+// ── Homepage ──────────────────────────────────────────────────────────────
+
+model HomepageConfig {
+  id                  String   @id @default(cuid())
+  heroEnabled         Boolean  @default(true)
+  heroTitle           String?
+  heroDescription     String?
+  heroBackgroundImage String?
+  heroMovieId         String?
+  heroTvShowId        String?
+  ctaText             String?
+  ctaLink             String?
+  updatedAt           DateTime @updatedAt
+
+  heroMovie  Movie?  @relation("HeroMovie", fields: [heroMovieId], references: [id])
+  heroTvShow TVShow? @relation("HeroTVShow", fields: [heroTvShowId], references: [id])
+  sections   HomepageSection[]
+
+  @@map("homepage_configs")
+}
+
+model HomepageSection {
+  id            String      @id @default(cuid())
+  configId      String
+  type          SectionType
+  title         String
+  enabled       Boolean     @default(true)
+  displayOrder  Int         @default(0)
+  contentSource String?
+  itemLimit     Int         @default(10)
+
+  config HomepageConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId, displayOrder])
+  @@map("homepage_sections")
+}
+
+// ── Analytics ─────────────────────────────────────────────────────────────
+
+model AnalyticsEvent {
+  id          String             @id @default(cuid())
+  eventType   AnalyticsEventType
+  contentId   String?
+  contentType ContentType?
+  movieId     String?
+  tvShowId    String?
+  searchQuery String?
+  sessionId   String?
+  metadata    Json?
+  userAgent   String?
+  country     String?
+  createdAt   DateTime           @default(now())
+
+  movie  Movie?  @relation(fields: [movieId], references: [id], onDelete: SetNull)
+  tvShow TVShow? @relation(fields: [tvShowId], references: [id], onDelete: SetNull)
+
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([movieId])
+  @@index([tvShowId])
+  @@map("analytics_events")
+}
+
+// ── Advertisement ─────────────────────────────────────────────────────────
+
+model Advertisement {
+  id           String         @id @default(cuid())
+  name         String
+  placement    AdPlacement
+  adCode       String
+  enabled      Boolean        @default(true)
+  startDate    DateTime?
+  endDate      DateTime?
+  deviceTarget AdDeviceTarget @default(ALL)
+  priority     Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([placement, enabled])
+  @@map("advertisements")
+}
+
+// ── SiteSetting ───────────────────────────────────────────────────────────
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  category  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@map("site_settings")
+}
+
+// ── AuditLog ──────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  adminId      String
+  adminEmail   String
+  action       String
+  resourceType String
+  resourceId   String?
+  metadata     Json?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  admin AdminUser @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@index([resourceType])
+  @@map("audit_logs")
+}
+
