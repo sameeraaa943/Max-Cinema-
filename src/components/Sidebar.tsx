@@ -259,9 +259,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           style={{ borderTop: '1px solid #242424' }}
         >
           <div className="text-xs" style={{ color: '#8A8A8A' }}>
-            <span className="gold-text font-semibold">v5.0</span>
+            <span className="gold-text font-semibold">v2.0</span>
             <span className="mx-2" style={{ color: '#242424' }}>|</span>
-            Control Platform
+            Control API
           </div>
           <a
             href="https://cinescopecodespactor.netlify.app"

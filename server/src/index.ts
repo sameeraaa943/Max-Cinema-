@@ -102,29 +102,24 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// ── Health Check & Root Endpoints (Render, Netlify & Monitoring) ─────────
-const handleHealth = async (_req: express.Request, res: express.Response) => {
+// ── Health Check ──────────────────────────────────────────────────────────
+app.get('/health', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.status(200).json({
+    res.json({
       status: 'ok',
-      service: 'CineScope Control API',
       database: 'connected',
       timestamp: new Date().toISOString(),
-      version: '5.0.0',
+      version: '2.0.0',
     });
   } catch {
     res.status(503).json({
       status: 'error',
-      service: 'CineScope Control API',
       database: 'disconnected',
       timestamp: new Date().toISOString(),
     });
   }
-};
-
-app.get(['/', '/health', '/healthz'], handleHealth);
-app.head(['/', '/health', '/healthz'], (_req, res) => res.status(200).end());
+});
 
 // ── Public Routes (no auth) ───────────────────────────────────────────────
 const ANALYTICS_SCRIPT = `/**

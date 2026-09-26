@@ -1,244 +1,336 @@
-// File: src/pages/homepage-builder/index.tsx
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Layout, Save, Eye, EyeOff, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
+import {
+  Layout,
+  Eye,
+  Save,
+  CheckCircle,
+  GripVertical,
+  ChevronUp,
+  ChevronDown,
+  Globe,
+  Loader2,
+  Sparkles,
+  Play,
+  RotateCcw,
+  Sliders,
+  Film,
+  Layers,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { homepageApi } from '../../services/api';
 
-const cardStyle: React.CSSProperties = { background: '#121212', border: '1px solid #242424', borderRadius: 12 };
-const btnGold: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #D4AF37, #C5A028)', color: '#070707', border: 'none',
-  borderRadius: 8, padding: '8px 18px', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-};
-const btnGhost: React.CSSProperties = {
-  background: 'transparent', color: '#8A8A8A', border: '1px solid #242424',
-  borderRadius: 8, padding: '6px 12px', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-};
-const inputStyle: React.CSSProperties = {
-  background: '#0a0a0a', border: '1px solid #242424', borderRadius: 8, color: '#fff',
-  padding: '8px 12px', fontSize: 14, outline: 'none', width: '100%',
-};
+interface SectionConfig {
+  id: string;
+  name: string;
+  type: string;
+  enabled: boolean;
+  order: number;
+  itemLimit: number;
+  customTitle?: string;
+}
 
-const SECTION_ICONS: Record<string, string> = {
-  HERO_BANNER: '🎬',
-  FEATURED: '⭐',
-  TRENDING: '🔥',
-  NEW_RELEASES: '🆕',
-  LATEST_MOVIES: '🎬',
-  LATEST_TV: '📺',
-  POPULAR_MOVIES: '🎞️',
-  POPULAR_TV: '📡',
-  COLLECTIONS: '📚',
-  CUSTOM: '✨',
-};
-
-const SECTION_LABELS: Record<string, string> = {
-  HERO_BANNER: 'Hero Banner',
-  FEATURED: 'Featured Content',
-  TRENDING: 'Trending Now',
-  NEW_RELEASES: 'New Releases',
-  LATEST_MOVIES: 'Latest Movies',
-  LATEST_TV: 'Latest TV Shows',
-  POPULAR_MOVIES: 'Popular Movies',
-  POPULAR_TV: 'Popular TV Shows',
-  COLLECTIONS: 'Collections',
-  CUSTOM: 'Custom Section',
-};
+const DEFAULT_SECTIONS: SectionConfig[] = [
+  { id: 'hero', name: 'Hero Spotlight Banner', type: 'HERO', enabled: true, order: 0, itemLimit: 1 },
+  { id: 'network_pins', name: 'Network Pinned Spotlight', type: 'NETWORK_PINS', enabled: true, order: 1, itemLimit: 6 },
+  { id: 'featured', name: 'Featured Premieres', type: 'FEATURED', enabled: true, order: 2, itemLimit: 12 },
+  { id: 'trending', name: 'Trending Now', type: 'TRENDING', enabled: true, order: 3, itemLimit: 10 },
+  { id: 'new_releases', name: 'New Releases', type: 'MOVIES', enabled: true, order: 4, itemLimit: 12 },
+  { id: 'tv_shows', name: 'Binge-Worthy TV Series', type: 'TV_SHOWS', enabled: true, order: 5, itemLimit: 10 },
+  { id: 'top_rated', name: 'Critically Acclaimed', type: 'TOP_RATED', enabled: true, order: 6, itemLimit: 10 },
+  { id: 'collections', name: 'Curated Collections', type: 'COLLECTIONS', enabled: true, order: 7, itemLimit: 8 },
+];
 
 export default function HomepageBuilderPage() {
-  const qc = useQueryClient();
-  const [sections, setSections] = useState<any[]>([]);
-  const [siteTitle, setSiteTitle] = useState('');
-  const [tagline, setTagline] = useState('');
-  const [heroStyle, setHeroStyle] = useState('FULL');
-  const [isDirty, setIsDirty] = useState(false);
+  const queryClient = useQueryClient();
+  const [sections, setSections] = useState<SectionConfig[]>(DEFAULT_SECTIONS);
+  const [heroTitle, setHeroTitle] = useState('');
+  const [heroDescription, setHeroDescription] = useState('');
+  const [heroBackdrop, setHeroBackdrop] = useState('');
+  const [heroMediaId, setHeroMediaId] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // Fetch Homepage Config
   const { data, isLoading } = useQuery({
-    queryKey: ['homepage'],
-    queryFn: () => homepageApi.get().then(r => r.data.data),
+    queryKey: ['homepage-config'],
+    queryFn: () => homepageApi.get(),
   });
 
   useEffect(() => {
-    if (data) {
-      setSections(data.sections || []);
-      setSiteTitle(data.siteTitle || '');
-      setTagline(data.tagline || '');
-      setHeroStyle(data.heroStyle || 'FULL');
-      setIsDirty(false);
+    if (data?.data?.data) {
+      const config = data.data.data;
+      if (config.sections && Array.isArray(config.sections) && config.sections.length > 0) {
+        setSections(config.sections.sort((a: any, b: any) => (a.order || 0) - (b.order || 0)));
+      }
+      if (config.hero) {
+        setHeroTitle(config.hero.title || '');
+        setHeroDescription(config.hero.description || '');
+        setHeroBackdrop(config.hero.backdropUrl || '');
+        setHeroMediaId(config.hero.mediaId || '');
+      }
     }
   }, [data]);
 
+  // Save Mutation (Draft)
   const saveMutation = useMutation({
-    mutationFn: () => homepageApi.update({ sections, siteTitle, tagline, heroStyle }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['homepage'] }); toast.success('Homepage settings saved!'); setIsDirty(false); },
-    onError: () => toast.error('Failed to save homepage settings'),
+    mutationFn: (isPublish: boolean) =>
+      homepageApi.update({
+        sections,
+        hero: {
+          title: heroTitle,
+          description: heroDescription,
+          backdropUrl: heroBackdrop,
+          mediaId: heroMediaId,
+        },
+        isPublished: isPublish,
+      }),
+    onSuccess: (_, isPublish) => {
+      queryClient.invalidateQueries({ queryKey: ['homepage-config'] });
+      setHasUnsavedChanges(false);
+      toast.success(isPublish ? 'Homepage published to live site!' : 'Homepage draft saved');
+    },
+    onError: () => {
+      toast.error('Failed to save homepage settings');
+    },
   });
 
-  const toggleSection = (idx: number) => {
-    setSections(prev => {
-      const updated = [...prev];
-      updated[idx] = { ...updated[idx], enabled: !updated[idx].enabled };
-      return updated;
-    });
-    setIsDirty(true);
+  const handleMove = (index: number, direction: 'UP' | 'DOWN') => {
+    const targetIndex = direction === 'UP' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= sections.length) return;
+
+    const newSections = [...sections];
+    const [moved] = newSections.splice(index, 1);
+    newSections.splice(targetIndex, 0, moved);
+
+    const reindexed = newSections.map((s, idx) => ({ ...s, order: idx }));
+    setSections(reindexed);
+    setHasUnsavedChanges(true);
   };
 
-  const moveUp = (idx: number) => {
-    if (idx === 0) return;
-    setSections(prev => {
-      const updated = [...prev];
-      [updated[idx - 1], updated[idx]] = [updated[idx], updated[idx - 1]];
-      return updated;
-    });
-    setIsDirty(true);
+  const handleToggle = (id: string) => {
+    setSections(prev =>
+      prev.map(s => (s.id === id ? { ...s, enabled: !s.enabled } : s))
+    );
+    setHasUnsavedChanges(true);
   };
 
-  const moveDown = (idx: number) => {
-    if (idx === sections.length - 1) return;
-    setSections(prev => {
-      const updated = [...prev];
-      [updated[idx], updated[idx + 1]] = [updated[idx + 1], updated[idx]];
-      return updated;
-    });
-    setIsDirty(true);
+  const handleLimitChange = (id: string, limit: number) => {
+    setSections(prev =>
+      prev.map(s => (s.id === id ? { ...s, itemLimit: Math.max(1, limit) } : s))
+    );
+    setHasUnsavedChanges(true);
+  };
+
+  const handleTitleChange = (id: string, customTitle: string) => {
+    setSections(prev =>
+      prev.map(s => (s.id === id ? { ...s, customTitle } : s))
+    );
+    setHasUnsavedChanges(true);
   };
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Layout size={28} color="#D4AF37" />
-          <div>
-            <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 700, fontFamily: 'Cinzel, serif' }}>
-              Homepage Builder {isDirty && <span style={{ color: '#D4AF37', fontSize: 16 }}>*</span>}
-            </h1>
-            <p style={{ color: '#8A8A8A', fontSize: 13, marginTop: 2 }}>Reorder and toggle sections on your public website</p>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-white font-cinzel tracking-wide">Homepage Builder & CMS</h1>
+            {hasUnsavedChanges && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                UNSAVED DRAFT
+              </span>
+            )}
           </div>
+          <p className="text-xs text-muted mt-1">
+            Visually arrange, toggle, customize item counts, and configure real-time hero showcases for the public Max Cinema website.
+          </p>
         </div>
-        <button style={{ ...btnGold, opacity: saveMutation.isPending ? 0.7 : 1 }} onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-          {saveMutation.isPending ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={14} />}
-          Save Changes
-        </button>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => saveMutation.mutate(false)}
+            disabled={saveMutation.isPending}
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#181818] border border-[#2e2e2e] text-gray-200 hover:text-white transition-all flex items-center gap-1.5"
+          >
+            <Save size={14} />
+            <span>Save Draft</span>
+          </button>
+
+          <button
+            onClick={() => saveMutation.mutate(true)}
+            disabled={saveMutation.isPending}
+            className="px-4 py-2 rounded-xl text-xs font-semibold btn-gold flex items-center gap-1.5 shadow-lg"
+            style={{ background: 'linear-gradient(135deg, #D4AF37 0%, #C5A028 100%)', color: '#070707' }}
+          >
+            <Globe size={14} />
+            <span>Publish to Live Site</span>
+          </button>
+        </div>
       </div>
 
-      {isLoading && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
-          <Loader2 size={32} color="#D4AF37" style={{ animation: 'spin 1s linear infinite' }} />
+      {/* Hero Movie Spotlight Configuration */}
+      <div
+        className="p-5 rounded-2xl space-y-4"
+        style={{ backgroundColor: '#121212', border: '1px solid #242424' }}
+      >
+        <div className="flex items-center justify-between border-b border-[#242424] pb-3">
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} className="text-gold" />
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Hero Spotlight Movie</h2>
+          </div>
+          <span className="text-[11px] text-muted">Pinned top billboard showcase</span>
         </div>
-      )}
 
-      {!isLoading && (
-        <>
-          <div style={{ ...cardStyle, padding: 24, marginBottom: 24 }}>
-            <h2 style={{ color: '#D4AF37', fontSize: 14, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>Site Settings</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div>
-                <label style={{ color: '#8A8A8A', fontSize: 12, display: 'block', marginBottom: 6 }}>Site Title</label>
-                <input style={inputStyle} value={siteTitle} onChange={e => { setSiteTitle(e.target.value); setIsDirty(true); }} placeholder="CineScope" />
-              </div>
-              <div>
-                <label style={{ color: '#8A8A8A', fontSize: 12, display: 'block', marginBottom: 6 }}>Tagline</label>
-                <input style={inputStyle} value={tagline} onChange={e => { setTagline(e.target.value); setIsDirty(true); }} placeholder="Your streaming destination" />
-              </div>
-            </div>
-            <div style={{ marginTop: 16 }}>
-              <label style={{ color: '#8A8A8A', fontSize: 12, display: 'block', marginBottom: 8 }}>Hero Style</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {['FULL', 'SPLIT', 'COMPACT'].map(style => (
-                  <button
-                    key={style}
-                    onClick={() => { setHeroStyle(style); setIsDirty(true); }}
-                    style={{
-                      background: heroStyle === style ? 'rgba(212,175,55,0.15)' : '#0a0a0a',
-                      color: heroStyle === style ? '#D4AF37' : '#8A8A8A',
-                      border: `1px solid ${heroStyle === style ? '#D4AF37' : '#242424'}`,
-                      borderRadius: 6, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontWeight: 600,
-                    }}
-                  >{style}</button>
-                ))}
-              </div>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div>
+            <label className="block text-muted font-medium mb-1">Headline Title</label>
+            <input
+              type="text"
+              placeholder="e.g. Dune: Part Two"
+              value={heroTitle}
+              onChange={(e) => { setHeroTitle(e.target.value); setHasUnsavedChanges(true); }}
+              className="w-full px-3 py-2 rounded-lg bg-[#0D0D0D] border border-[#242424] text-white focus:outline-none"
+            />
           </div>
 
-          <div style={{ ...cardStyle, overflow: 'hidden', marginBottom: 24 }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #242424' }}>
-              <h2 style={{ color: '#D4AF37', fontSize: 14, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Page Sections</h2>
-              <p style={{ color: '#8A8A8A', fontSize: 12, marginTop: 2 }}>Use the arrows to reorder sections, toggle the eye to show/hide</p>
-            </div>
+          <div>
+            <label className="block text-muted font-medium mb-1">Target Media ID (Movie / TV)</label>
+            <input
+              type="text"
+              placeholder="e.g. cly... (Content ID)"
+              value={heroMediaId}
+              onChange={(e) => { setHeroMediaId(e.target.value); setHasUnsavedChanges(true); }}
+              className="w-full px-3 py-2 rounded-lg bg-[#0D0D0D] border border-[#242424] text-white font-mono focus:outline-none"
+            />
+          </div>
 
-            {sections.length === 0 && (
-              <div style={{ padding: 40, textAlign: 'center', color: '#8A8A8A' }}>No sections configured</div>
-            )}
+          <div className="md:col-span-2">
+            <label className="block text-muted font-medium mb-1">Backdrop Image URL</label>
+            <input
+              type="text"
+              placeholder="https://image.tmdb.org/t/p/original/..."
+              value={heroBackdrop}
+              onChange={(e) => { setHeroBackdrop(e.target.value); setHasUnsavedChanges(true); }}
+              className="w-full px-3 py-2 rounded-lg bg-[#0D0D0D] border border-[#242424] text-white focus:outline-none"
+            />
+          </div>
 
-            {sections.map((section: any, idx: number) => (
+          <div className="md:col-span-2">
+            <label className="block text-muted font-medium mb-1">Tagline / Synopsis</label>
+            <textarea
+              rows={2}
+              placeholder="Hero synopsis text..."
+              value={heroDescription}
+              onChange={(e) => { setHeroDescription(e.target.value); setHasUnsavedChanges(true); }}
+              className="w-full px-3 py-2 rounded-lg bg-[#0D0D0D] border border-[#242424] text-white focus:outline-none resize-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Sections Stack */}
+      <div
+        className="p-5 rounded-2xl space-y-4"
+        style={{ backgroundColor: '#121212', border: '1px solid #242424' }}
+      >
+        <div className="flex items-center justify-between border-b border-[#242424] pb-3">
+          <div className="flex items-center gap-2">
+            <Layers size={18} className="text-gold" />
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Homepage Sections & Order</h2>
+          </div>
+          <span className="text-[11px] text-muted">Use arrows to reorder, eye to toggle visibility</span>
+        </div>
+
+        {isLoading ? (
+          <div className="p-8 text-center text-xs text-muted">
+            <Loader2 size={16} className="animate-spin text-gold mx-auto mb-2" />
+            <span>Loading layout configuration...</span>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {sections.map((section, idx) => (
               <div
-                key={section.id || idx}
+                key={section.id}
+                className="p-3.5 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 transition-all"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '14px 20px',
-                  borderBottom: '1px solid #1a1a1a',
-                  borderLeft: `3px solid ${section.enabled ? '#D4AF37' : '#242424'}`,
-                  background: section.enabled ? 'rgba(212,175,55,0.03)' : 'transparent',
-                  transition: 'all 0.2s ease',
+                  backgroundColor: section.enabled ? '#171717' : '#0D0D0D',
+                  border: section.enabled ? '1px solid #2e2e2e' : '1px solid #1c1c1c',
+                  borderLeft: section.enabled ? '3px solid #D4AF37' : '3px solid #333333',
+                  opacity: section.enabled ? 1 : 0.6,
                 }}
               >
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 20 }}>{SECTION_ICONS[section.type] || '📄'}</span>
+                {/* Left: Reorder & Name */}
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col gap-0.5">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => handleMove(idx, 'UP')}
+                      className="p-1 rounded bg-[#202020] text-muted hover:text-white disabled:opacity-20 transition-colors"
+                      title="Move Up"
+                    >
+                      <ChevronUp size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === sections.length - 1}
+                      onClick={() => handleMove(idx, 'DOWN')}
+                      className="p-1 rounded bg-[#202020] text-muted hover:text-white disabled:opacity-20 transition-colors"
+                      title="Move Down"
+                    >
+                      <ChevronDown size={12} />
+                    </button>
+                  </div>
+
+                  <span className="font-mono text-[11px] text-gold/70 w-5">#{idx + 1}</span>
+
                   <div>
-                    <div style={{ color: section.enabled ? '#fff' : '#6b7280', fontWeight: 600, fontSize: 14 }}>
-                      {section.title || SECTION_LABELS[section.type] || section.type}
-                    </div>
-                    <div style={{ color: '#8A8A8A', fontSize: 11, marginTop: 1 }}>
-                      {section.type} {section.itemCount ? `· ${section.itemCount} items` : ''}
-                    </div>
+                    <span className="text-xs font-semibold text-white">{section.name}</span>
+                    <span className="text-[10px] text-muted ml-2 font-mono uppercase">[{section.type}]</span>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {/* Right: Custom Title, Limit & Toggle */}
+                <div className="flex items-center gap-3 text-xs">
+                  <input
+                    type="text"
+                    placeholder="Custom section title"
+                    value={section.customTitle || ''}
+                    onChange={(e) => handleTitleChange(section.id, e.target.value)}
+                    className="px-2.5 py-1 rounded bg-[#0D0D0D] border border-[#242424] text-white text-xs w-44 focus:outline-none"
+                  />
+
+                  <div className="flex items-center gap-1.5 text-muted">
+                    <span className="text-[11px]">Limit:</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={30}
+                      value={section.itemLimit}
+                      onChange={(e) => handleLimitChange(section.id, parseInt(e.target.value) || 1)}
+                      className="w-14 px-2 py-1 rounded bg-[#0D0D0D] border border-[#242424] text-white font-mono text-center focus:outline-none"
+                    />
+                  </div>
+
                   <button
-                    onClick={() => moveUp(idx)}
-                    disabled={idx === 0}
-                    style={{ ...btnGhost, padding: '4px 8px', opacity: idx === 0 ? 0.3 : 1 }}
-                    title="Move Up"
-                  ><ChevronUp size={14} /></button>
-                  <button
-                    onClick={() => moveDown(idx)}
-                    disabled={idx === sections.length - 1}
-                    style={{ ...btnGhost, padding: '4px 8px', opacity: idx === sections.length - 1 ? 0.3 : 1 }}
-                    title="Move Down"
-                  ><ChevronDown size={14} /></button>
-                  <button
-                    onClick={() => toggleSection(idx)}
+                    type="button"
+                    onClick={() => handleToggle(section.id)}
+                    className="p-2 rounded-lg border transition-colors"
                     style={{
-                      background: section.enabled ? 'rgba(212,175,55,0.1)' : 'rgba(107,114,128,0.1)',
-                      color: section.enabled ? '#D4AF37' : '#6b7280',
-                      border: `1px solid ${section.enabled ? 'rgba(212,175,55,0.3)' : '#242424'}`,
-                      borderRadius: 6, padding: '5px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12,
+                      backgroundColor: section.enabled ? 'rgba(212,175,55,0.15)' : '#0D0D0D',
+                      borderColor: section.enabled ? '#D4AF37' : '#242424',
+                      color: section.enabled ? '#D4AF37' : '#666666',
                     }}
-                    title={section.enabled ? 'Hide section' : 'Show section'}
+                    title={section.enabled ? 'Visible on site' : 'Hidden on site'}
                   >
-                    {section.enabled ? <Eye size={13} /> : <EyeOff size={13} />}
-                    {section.enabled ? 'Visible' : 'Hidden'}
+                    <Eye size={14} />
                   </button>
                 </div>
               </div>
             ))}
           </div>
-
-          {isDirty && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button style={btnGhost} onClick={() => { if (data) { setSections(data.sections || []); setSiteTitle(data.siteTitle || ''); setTagline(data.tagline || ''); setHeroStyle(data.heroStyle || 'FULL'); setIsDirty(false); } }}>
-                Discard Changes
-              </button>
-              <button style={btnGold} onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={14} />}
-                Save Changes
-              </button>
-            </div>
-          )}
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

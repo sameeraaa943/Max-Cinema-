@@ -337,3 +337,12 @@ export const aiControlApi = {
   command: (command: string) => api.post('/api/admin/ai-control/command', { command }),
   history: () => api.get('/api/admin/ai-control/history'),
 };
+
+// ── V5.1 Network Pins ────────────────────────────────────────────────────────
+export const networkPinsApi = {
+  list: (params?: any) => api.get('/api/admin/network-pins', { params }),
+  create: (data: any) => api.post('/api/admin/network-pins', data),
+  update: (id: string, data: any) => api.put(`/api/admin/network-pins/${id}`, data),
+  delete: (id: string) => api.delete(`/api/admin/network-pins/${id}`),
+};
+
