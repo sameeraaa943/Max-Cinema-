@@ -15,6 +15,16 @@ import {
   ChevronRight,
   Diamond,
   X,
+  // V3 icons
+  ShieldCheck,
+  Image,
+  CalendarClock,
+  Search,
+  Radio,
+  Activity,
+  Code2,
+  Monitor,
+  Layout,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { authApi } from '../services/api';
@@ -46,29 +56,39 @@ const navSections: { title: string; items: NavItem[] }[] = [
       { icon: Star, label: 'Featured', path: '/featured' },
       { icon: TrendingUp, label: 'Trending', path: '/trending' },
       { icon: BookOpen, label: 'Collections', path: '/collections' },
+      { icon: ShieldCheck, label: 'Content Health', path: '/content-center' },
+      { icon: Image, label: 'Media Library', path: '/media' },
+      { icon: CalendarClock, label: 'Scheduler', path: '/scheduler' },
     ],
   },
   {
     title: 'WEBSITE',
     items: [
       { icon: Home, label: 'Homepage', path: '/homepage' },
+      { icon: Layout, label: 'Homepage Builder', path: '/homepage-builder' },
+      { icon: Monitor, label: 'Site Preview', path: '/preview' },
     ],
   },
   {
     title: 'INSIGHTS',
     items: [
       { icon: BarChart2, label: 'Analytics', path: '/analytics' },
+      { icon: Search, label: 'Search Analytics', path: '/search-analytics' },
+      { icon: Radio, label: 'Live Activity', path: '/live' },
       { icon: DollarSign, label: 'Ads', path: '/ads' },
     ],
   },
   {
     title: 'SYSTEM',
     items: [
+      { icon: Activity, label: 'System Health', path: '/system-health' },
+      { icon: Code2, label: 'Developer', path: '/developer' },
       { icon: Settings, label: 'Settings', path: '/settings' },
       { icon: ClipboardList, label: 'Audit Log', path: '/audit-log' },
     ],
   },
 ];
+
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const navigate = useNavigate();

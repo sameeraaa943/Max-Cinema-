@@ -19,6 +19,11 @@ import { settingsRouter } from './routes/settings';
 import { auditRouter } from './routes/audit';
 import { publicRouter } from './routes/public';
 import { tmdbRouter } from './routes/tmdb';
+import { contentCenterRouter } from './routes/contentCenter';
+import { mediaRouter } from './routes/media';
+import { schedulerRouter } from './routes/scheduler';
+import { systemHealthRouter } from './routes/systemHealth';
+import { startSchedulerRunner } from './lib/schedulerRunner';
 import { errorHandler } from './middleware/errorHandler';
 import { prisma } from './lib/prisma';
 
@@ -138,6 +143,10 @@ app.use('/api/admin/ads', adsRouter);
 app.use('/api/admin/settings', settingsRouter);
 app.use('/api/admin/audit', auditRouter);
 app.use('/api/admin/tmdb', tmdbRouter);
+app.use('/api/admin/content-center', contentCenterRouter);
+app.use('/api/admin/media', mediaRouter);
+app.use('/api/admin/scheduler', schedulerRouter);
+app.use('/api/admin/system', systemHealthRouter);
 
 // ── 404 ───────────────────────────────────────────────────────────────────
 app.use((_req, res) => {
@@ -152,6 +161,9 @@ app.listen(PORT, () => {
   console.log(`🎬 CineScope API running on port ${PORT}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   Health: http://localhost:${PORT}/health`);
+
+  // Start background content scheduler engine
+  startSchedulerRunner(60000);
 });
 
 // Graceful shutdown

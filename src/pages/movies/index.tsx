@@ -12,6 +12,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  CheckSquare,
+  Square,
+  Download,
+  Upload,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { moviesApi, settingsApi } from '../../services/api';
@@ -20,6 +25,8 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import LoadingSkeleton from '../../components/ui/LoadingSkeleton';
 import EmptyState from '../../components/ui/EmptyState';
+
+
 
 export default function MoviesPage() {
   const navigate = useNavigate();
@@ -38,6 +45,16 @@ export default function MoviesPage() {
   // Confirm delete dialog state
   const [deleteMovieId, setDeleteMovieId] = useState<string | null>(null);
   const [deleteMovieTitle, setDeleteMovieTitle] = useState<string>('');
+
+  // V3: Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [pendingBulkAction, setPendingBulkAction] = useState<string>('');
+
+  // V3: Import modal
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importText, setImportText] = useState('');
+
 
   // Debounce search
   useEffect(() => {
@@ -103,6 +120,61 @@ export default function MoviesPage() {
     onError: () => toast.error('Failed to delete movie'),
   });
 
+  const bulkActionMutation = useMutation({
+    mutationFn: ({ ids, action }: { ids: string[]; action: string }) =>
+      moviesApi.bulkAction(ids, action),
+    onSuccess: (_, { action }) => {
+      queryClient.invalidateQueries({ queryKey: ['movies'] });
+      toast.success(`Bulk ${action} applied to ${selectedIds.size} movies`);
+      setSelectedIds(new Set());
+      setShowBulkConfirm(false);
+      setPendingBulkAction('');
+    },
+    onError: () => toast.error('Bulk action failed'),
+  });
+
+  // Selection helpers
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (selectedIds.size === movies.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(movies.map(m => m.id)));
+    }
+  };
+  const handleBulkAction = (action: string) => {
+    if (selectedIds.size === 0) { toast.error('No movies selected'); return; }
+    setPendingBulkAction(action);
+    setShowBulkConfirm(true);
+  };
+  const handleExport = async () => {
+    try {
+      const res = await moviesApi.exportMovies('json');
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'movies-export.json'; a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Movies exported');
+    } catch { toast.error('Export failed'); }
+  };
+  const handleImport = async () => {
+    try {
+      const parsed = JSON.parse(importText);
+      const movies = Array.isArray(parsed) ? parsed : parsed.data || parsed.items || [];
+      await moviesApi.importMovies(movies);
+      queryClient.invalidateQueries({ queryKey: ['movies'] });
+      toast.success(`Imported ${movies.length} movies`);
+      setShowImportModal(false);
+      setImportText('');
+    } catch { toast.error('Import failed — check JSON format'); }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -114,18 +186,38 @@ export default function MoviesPage() {
           </p>
         </div>
 
-        <Link
-          to="/movies/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold btn-gold transition-all self-start sm:self-auto"
-          style={{
-            background: 'linear-gradient(135deg, #D4AF37 0%, #C5A028 100%)',
-            color: '#070707',
-          }}
-        >
-          <Plus size={16} />
-          <span>Add Movie</span>
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={handleExport} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors" style={{ backgroundColor: '#1A1A1A', border: '1px solid #242424', color: '#D4AF37' }}>
+            <Download size={14} /> Export
+          </button>
+          <button onClick={() => setShowImportModal(true)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors" style={{ backgroundColor: '#1A1A1A', border: '1px solid #242424', color: '#8A8A8A' }}>
+            <Upload size={14} /> Import
+          </button>
+          <Link
+            to="/movies/new"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold btn-gold transition-all self-start sm:self-auto"
+            style={{ background: 'linear-gradient(135deg, #D4AF37 0%, #C5A028 100%)', color: '#070707' }}
+          >
+            <Plus size={16} />
+            <span>Add Movie</span>
+          </Link>
+        </div>
       </div>
+
+      {/* Bulk Action Toolbar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl flex-wrap" style={{ backgroundColor: '#1A1400', border: '1px solid #D4AF37' }}>
+          <span className="text-xs font-semibold" style={{ color: '#D4AF37' }}>{selectedIds.size} selected</span>
+          {['publish','archive','feature','unfeature','trending','untrending','delete'].map(action => (
+            <button key={action} onClick={() => handleBulkAction(action)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors"
+              style={{ backgroundColor: action === 'delete' ? '#3D0000' : '#1A1A1A', border: `1px solid ${action === 'delete' ? '#FF4444' : '#242424'}`, color: action === 'delete' ? '#FF6666' : '#CCCCCC' }}>
+              {action}
+            </button>
+          ))}
+          <button onClick={() => setSelectedIds(new Set())} className="ml-auto p-1.5 rounded-lg" style={{ color: '#8A8A8A' }}><X size={14} /></button>
+        </div>
+      )}
 
       {/* Filter Bar */}
       <div
@@ -230,6 +322,11 @@ export default function MoviesPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="text-[11px] font-semibold text-muted uppercase tracking-wider border-b border-[#242424]" style={{ backgroundColor: '#0D0D0D' }}>
+                  <th className="py-3.5 px-4 w-8">
+                    <button onClick={toggleSelectAll} style={{ color: selectedIds.size === movies.length && movies.length > 0 ? '#D4AF37' : '#555' }}>
+                      {selectedIds.size === movies.length && movies.length > 0 ? <CheckSquare size={15} /> : <Square size={15} />}
+                    </button>
+                  </th>
                   <th className="py-3.5 px-4">Poster</th>
                   <th className="py-3.5 px-4">Title</th>
                   <th className="py-3.5 px-4">Year</th>
@@ -240,6 +337,7 @@ export default function MoviesPage() {
                   <th className="py-3.5 px-4 text-center">Trending</th>
                   <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
+
               </thead>
               <tbody className="divide-y divide-[#1f1f1f] text-xs">
                 {movies.map((movie) => {
@@ -251,7 +349,14 @@ export default function MoviesPage() {
                     <tr
                       key={movie.id}
                       className="hover:bg-white/[0.02] transition-colors"
+                      style={selectedIds.has(movie.id) ? { backgroundColor: '#1A1400' } : {}}
                     >
+                      {/* Checkbox */}
+                      <td className="py-2.5 px-4">
+                        <button onClick={() => toggleSelect(movie.id)} style={{ color: selectedIds.has(movie.id) ? '#D4AF37' : '#555' }}>
+                          {selectedIds.has(movie.id) ? <CheckSquare size={15} /> : <Square size={15} />}
+                        </button>
+                      </td>
                       {/* Poster */}
                       <td className="py-2.5 px-4">
                         <div
@@ -266,6 +371,7 @@ export default function MoviesPage() {
                               onError={(e) => {
                                 (e.target as HTMLElement).style.display = 'none';
                               }}
+
                             />
                           ) : (
                             <Film size={16} className="text-muted/50" />
@@ -427,6 +533,44 @@ export default function MoviesPage() {
         onCancel={() => setDeleteMovieId(null)}
         isLoading={deleteMutation.isPending}
       />
+
+      {/* Bulk Action Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={showBulkConfirm}
+        title={`Bulk ${pendingBulkAction}`}
+        message={`Apply "${pendingBulkAction}" to ${selectedIds.size} selected movies?`}
+        confirmLabel={`Apply ${pendingBulkAction}`}
+        danger={pendingBulkAction === 'delete'}
+        onConfirm={() => bulkActionMutation.mutate({ ids: Array.from(selectedIds), action: pendingBulkAction })}
+        onCancel={() => { setShowBulkConfirm(false); setPendingBulkAction(''); }}
+        isLoading={bulkActionMutation.isPending}
+      />
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }} onClick={() => setShowImportModal(false)}>
+          <div className="w-full max-w-lg rounded-2xl p-6 space-y-4" style={{ backgroundColor: '#121212', border: '1px solid #242424' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-white font-semibold">Import Movies (JSON)</h3>
+              <button onClick={() => setShowImportModal(false)} style={{ color: '#8A8A8A' }}><X size={18} /></button>
+            </div>
+            <p className="text-xs" style={{ color: '#8A8A8A' }}>Paste a JSON array of movie objects. Duplicates will be skipped.</p>
+            <textarea
+              value={importText}
+              onChange={e => setImportText(e.target.value)}
+              placeholder='[{"title": "Movie Name", "releaseDate": "2024-01-01", ...}]'
+              rows={10}
+              className="w-full rounded-lg p-3 text-xs font-mono resize-none focus:outline-none"
+              style={{ backgroundColor: '#0D0D0D', border: '1px solid #242424', color: '#FFFFFF' }}
+            />
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setShowImportModal(false)} className="px-4 py-2 rounded-lg text-xs" style={{ backgroundColor: '#1A1A1A', border: '1px solid #242424', color: '#8A8A8A' }}>Cancel</button>
+              <button onClick={handleImport} className="px-4 py-2 rounded-lg text-xs font-semibold" style={{ background: 'linear-gradient(135deg, #D4AF37, #C5A028)', color: '#070707' }}>Import Movies</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

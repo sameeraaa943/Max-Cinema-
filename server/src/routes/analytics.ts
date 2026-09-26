@@ -145,3 +145,106 @@ function buildChartData(
   return Object.values(buckets);
 }
 
+// GET /api/admin/analytics/searches — Search Analytics & Missing Content Radar
+analyticsRouter.get('/searches', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const rawSearches = await prisma.analyticsEvent.groupBy({
+      by: ['searchQuery'],
+      where: { eventType: 'search', searchQuery: { not: null } },
+      _count: { searchQuery: true },
+      orderBy: { _count: { searchQuery: 'desc' } },
+      take: 50,
+    });
+
+    const analyzedSearches = await Promise.all(
+      rawSearches.map(async (s) => {
+        const query = s.searchQuery || '';
+        const [matchingMovies, matchingTV] = await Promise.all([
+          prisma.movie.count({ where: { title: { contains: query, mode: 'insensitive' } } }),
+          prisma.tVShow.count({ where: { title: { contains: query, mode: 'insensitive' } } }),
+        ]);
+
+        const hasResults = matchingMovies + matchingTV > 0;
+        return {
+          query,
+          count: s._count.searchQuery,
+          hasResults,
+          resultCount: matchingMovies + matchingTV,
+        };
+      })
+    );
+
+    const zeroResultSearches = analyzedSearches.filter((s) => !s.hasResults);
+    const topSearches = analyzedSearches.filter((s) => s.hasResults);
+
+    res.json({
+      success: true,
+      data: {
+        totalSearches: rawSearches.reduce((acc, curr) => acc + curr._count.searchQuery, 0),
+        topSearches,
+        zeroResultSearches,
+      },
+    });
+  } catch (err) {
+    console.error('[Analytics Searches] Error:', err);
+    res.status(500).json({ success: false, error: 'Failed to fetch search analytics' });
+  }
+});
+
+// GET /api/admin/analytics/live — Live Activity Stream
+analyticsRouter.get('/live', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const events = await prisma.analyticsEvent.findMany({
+      take: 40,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        movie: { select: { title: true, posterUrl: true } },
+        tvShow: { select: { title: true, posterUrl: true } },
+      },
+    });
+
+    const liveFeed = events.map((e) => {
+      let description = 'Viewed a page';
+      let title = '';
+
+      if (e.eventType === 'page_view') {
+        description = 'Navigated site page';
+      } else if (e.eventType === 'movie_view' && e.movie) {
+        description = 'Watching Movie';
+        title = e.movie.title;
+      } else if (e.eventType === 'tv_show_view' && e.tvShow) {
+        description = 'Viewing TV Series';
+        title = e.tvShow.title;
+      } else if (e.eventType === 'search') {
+        description = `Searched "${e.searchQuery || 'term'}"`;
+        title = e.searchQuery || '';
+      } else if (e.eventType === 'featured_click') {
+        description = 'Clicked Featured Content Banner';
+      } else if (e.eventType === 'trending_click') {
+        description = 'Clicked Trending Carousel Title';
+      }
+
+      return {
+        id: e.id,
+        eventType: e.eventType,
+        description,
+        title,
+        country: e.country || 'Global Visitor',
+        timestamp: e.createdAt,
+        posterUrl: e.movie?.posterUrl || e.tvShow?.posterUrl || null,
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        activeVisitors: Math.max(liveFeed.length > 0 ? new Set(events.map((e) => e.sessionId).filter(Boolean)).size : 1, 1),
+        events: liveFeed,
+      },
+    });
+  } catch (err) {
+    console.error('[Analytics Live] Error:', err);
+    res.status(500).json({ success: false, error: 'Failed to fetch live activity' });
+  }
+});
+

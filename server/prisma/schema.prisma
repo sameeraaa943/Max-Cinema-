@@ -23,6 +23,10 @@ enum ContentStatus {
   ACTIVE
   INACTIVE
   DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
 }
 
 enum ContentType {
@@ -198,6 +202,7 @@ model TVShow {
   updatedAt     DateTime      @updatedAt
 
   genres          TVShowGenre[]
+  seasons         Season[]
   featuredItems   FeaturedItem[]
   trendingItems   TrendingItem[]
   collectionItems CollectionItem[]
@@ -418,4 +423,123 @@ model AuditLog {
   @@index([resourceType])
   @@map("audit_logs")
 }
+
+// ── Seasons & Episodes (V3 Advanced TV Manager) ───────────────────────────
+
+model Season {
+  id           String    @id @default(cuid())
+  tvShowId     String
+  seasonNumber Int
+  title        String?
+  overview     String?
+  posterUrl    String?
+  airDate      DateTime?
+  displayOrder Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tvShow   TVShow    @relation(fields: [tvShowId], references: [id], onDelete: Cascade)
+  episodes Episode[]
+
+  @@unique([tvShowId, seasonNumber])
+  @@index([tvShowId])
+  @@map("seasons")
+}
+
+model Episode {
+  id            String        @id @default(cuid())
+  seasonId      String
+  episodeNumber Int
+  title         String
+  description   String?
+  thumbnailUrl  String?
+  airDate       DateTime?
+  runtime       Int?
+  videoUrl      String?
+  status        ContentStatus @default(PUBLISHED)
+  displayOrder  Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, episodeNumber])
+  @@index([seasonId])
+  @@map("episodes")
+}
+
+// ── Media Library (V3) ───────────────────────────────────────────────────
+
+enum MediaType {
+  POSTER
+  BACKDROP
+  LOGO
+  THUMBNAIL
+  BANNER
+  OTHER
+}
+
+model MediaAsset {
+  id           String    @id @default(cuid())
+  title        String
+  url          String    @unique
+  thumbnailUrl String?
+  type         MediaType @default(POSTER)
+  mimeType     String?
+  sizeBytes    Int?
+  width        Int?
+  height       Int?
+  altText      String?
+  tags         String[]  @default([])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([type])
+  @@map("media_assets")
+}
+
+// ── Content Scheduler (V3) ───────────────────────────────────────────────
+
+enum ScheduleTargetType {
+  MOVIE
+  TV_SHOW
+  FEATURED
+  TRENDING
+  HOMEPAGE
+  COLLECTION
+}
+
+enum ScheduleAction {
+  PUBLISH
+  UNPUBLISH
+  FEATURE
+  UNFEATURE
+  SET_TRENDING
+  REMOVE_TRENDING
+}
+
+enum ScheduleStatus {
+  PENDING
+  EXECUTED
+  FAILED
+  CANCELED
+}
+
+model ScheduledTask {
+  id          String             @id @default(cuid())
+  targetType  ScheduleTargetType
+  targetId    String
+  action      ScheduleAction
+  scheduledAt DateTime
+  status      ScheduleStatus     @default(PENDING)
+  executedAt  DateTime?
+  error       String?
+  metadata    Json?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([scheduledAt, status])
+  @@map("scheduled_tasks")
+}
+
 

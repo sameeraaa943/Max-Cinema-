@@ -22,6 +22,17 @@ const AnalyticsPage = lazy(() => import('./pages/analytics/index'));
 const AdsPage = lazy(() => import('./pages/ads/index'));
 const SettingsPage = lazy(() => import('./pages/settings/index'));
 const AuditLogPage = lazy(() => import('./pages/audit-log/index'));
+// V3 pages
+const ContentCenterPage = lazy(() => import('./pages/content-center/index'));
+const MediaPage = lazy(() => import('./pages/media/index'));
+const SchedulerPage = lazy(() => import('./pages/scheduler/index'));
+const SearchAnalyticsPage = lazy(() => import('./pages/search-analytics/index'));
+const LivePage = lazy(() => import('./pages/live/index'));
+const SystemHealthPage = lazy(() => import('./pages/system-health/index'));
+const DeveloperPage = lazy(() => import('./pages/developer/index'));
+const PreviewPage = lazy(() => import('./pages/preview/index'));
+const HomepageBuilderPage = lazy(() => import('./pages/homepage-builder/index'));
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -106,6 +117,16 @@ export default function App() {
                 <Route path="ads" element={<AdsPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="audit-log" element={<AuditLogPage />} />
+                {/* V3 Routes */}
+                <Route path="content-center" element={<ContentCenterPage />} />
+                <Route path="media" element={<MediaPage />} />
+                <Route path="scheduler" element={<SchedulerPage />} />
+                <Route path="search-analytics" element={<SearchAnalyticsPage />} />
+                <Route path="live" element={<LivePage />} />
+                <Route path="system-health" element={<SystemHealthPage />} />
+                <Route path="developer" element={<DeveloperPage />} />
+                <Route path="preview" element={<PreviewPage />} />
+                <Route path="homepage-builder" element={<HomepageBuilderPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>

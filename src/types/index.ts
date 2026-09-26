@@ -30,7 +30,7 @@ export interface Genre {
 }
 
 // ── Movie ──────────────────────────────────────────────────
-export type MovieStatus = 'ACTIVE' | 'INACTIVE' | 'DRAFT';
+export type MovieStatus = 'ACTIVE' | 'INACTIVE' | 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'SCHEDULED' | 'ARCHIVED';
 
 export interface Movie {
   id: string;
@@ -488,4 +488,139 @@ export interface TVShowFilters {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
+
+// ── V3 Advanced CMS Types ─────────────────────────────────
+
+export interface Episode {
+  id: string;
+  seasonId: string;
+  episodeNumber: number;
+  title: string;
+  description?: string;
+  thumbnailUrl?: string;
+  airDate?: string;
+  runtime?: number;
+  videoUrl?: string;
+  status: MovieStatus;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Season {
+  id: string;
+  tvShowId: string;
+  seasonNumber: number;
+  title?: string;
+  overview?: string;
+  posterUrl?: string;
+  airDate?: string;
+  displayOrder: number;
+  episodes: Episode[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MediaType = 'POSTER' | 'BACKDROP' | 'LOGO' | 'THUMBNAIL' | 'BANNER' | 'OTHER';
+
+export interface MediaAsset {
+  id: string;
+  title: string;
+  url: string;
+  thumbnailUrl?: string;
+  type: MediaType;
+  mimeType?: string;
+  sizeBytes?: number;
+  width?: number;
+  height?: number;
+  altText?: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ScheduleTargetType = 'MOVIE' | 'TV_SHOW' | 'FEATURED' | 'TRENDING' | 'HOMEPAGE' | 'COLLECTION';
+export type ScheduleAction = 'PUBLISH' | 'UNPUBLISH' | 'FEATURE' | 'UNFEATURE' | 'SET_TRENDING' | 'REMOVE_TRENDING';
+export type ScheduleStatus = 'PENDING' | 'EXECUTED' | 'FAILED' | 'CANCELED';
+
+export interface ScheduledTask {
+  id: string;
+  targetType: ScheduleTargetType;
+  targetId: string;
+  targetTitle?: string;
+  action: ScheduleAction;
+  scheduledAt: string;
+  status: ScheduleStatus;
+  executedAt?: string;
+  error?: string;
+  metadata?: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContentHealthSummary {
+  totalMovies: number;
+  totalTVShows: number;
+  totalTitles: number;
+  completeTitles: number;
+  healthScore: number;
+  issues: {
+    missingBackdrop: number;
+    missingTrailer: number;
+    missingPoster: number;
+    missingDescription: number;
+    missingGenres: number;
+    possibleDuplicates: number;
+  };
+}
+
+export interface SystemHealthMetrics {
+  timestamp: string;
+  apiLatency: number;
+  services: {
+    api: {
+      status: 'ok' | 'error';
+      uptimeSeconds: number;
+      nodeVersion: string;
+      environment: string;
+    };
+    database: {
+      status: 'ok' | 'error';
+      latencyMs: number;
+      engine: string;
+    };
+    tmdb: {
+      status: 'ok' | 'error' | 'not_configured';
+      latencyMs: number;
+    };
+    publicWebsite: {
+      status: 'ok' | 'error';
+      latencyMs: number;
+      url: string;
+    };
+  };
+  memory: {
+    heapUsedMB: number;
+    heapTotalMB: number;
+    rssMB: number;
+  };
+}
+
+export interface SearchMetric {
+  query: string;
+  count: number;
+  hasResults: boolean;
+  resultCount: number;
+}
+
+export interface LiveActivityEvent {
+  id: string;
+  eventType: string;
+  description: string;
+  title?: string;
+  country: string;
+  timestamp: string;
+  posterUrl?: string | null;
+}
+
 

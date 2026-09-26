@@ -20,8 +20,8 @@ tvShowsRouter.get('/', async (req: AuthRequest, res: Response): Promise<void> =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
     if (search) where.title = { contains: search, mode: 'insensitive' };
-    if (status) where.status = status as ContentStatus;
-    if (tvStatus) where.tvStatus = tvStatus as TVStatus;
+    if (status && status !== 'ALL') where.status = status as ContentStatus;
+    if (tvStatus && tvStatus !== 'ALL') where.tvStatus = tvStatus as TVStatus;
     if (featured === 'true') where.featured = true;
     if (trending === 'true') where.trending = true;
     if (genre) where.genres = { some: { genre: { slug: genre } } };
@@ -31,7 +31,10 @@ tvShowsRouter.get('/', async (req: AuthRequest, res: Response): Promise<void> =>
       prisma.tVShow.findMany({
         where, skip, take: Number(limit),
         orderBy: { [sortBy]: sortOrder },
-        include: { genres: { include: { genre: true } } },
+        include: {
+          genres: { include: { genre: true } },
+          _count: { select: { seasons: true } },
+        },
       }),
       prisma.tVShow.count({ where }),
     ]);
@@ -39,6 +42,7 @@ tvShowsRouter.get('/', async (req: AuthRequest, res: Response): Promise<void> =>
     const shows = items.map((s) => ({
       ...s,
       genres: s.genres.map((sg) => sg.genre),
+      seasonCount: s._count.seasons,
     }));
 
     res.json({
@@ -63,10 +67,24 @@ tvShowsRouter.get('/:id', async (req: AuthRequest, res: Response): Promise<void>
     const id = getId(req);
     const show = await prisma.tVShow.findUnique({
       where: { id },
-      include: { genres: { include: { genre: true } } },
+      include: {
+        genres: { include: { genre: true } },
+        seasons: {
+          orderBy: { seasonNumber: 'asc' },
+          include: {
+            episodes: { orderBy: { episodeNumber: 'asc' } },
+          },
+        },
+      },
     });
     if (!show) { res.status(404).json({ success: false, error: 'TV show not found' }); return; }
-    res.json({ success: true, data: { ...show, genres: show.genres.map((sg) => sg.genre) } });
+    res.json({
+      success: true,
+      data: {
+        ...show,
+        genres: show.genres.map((sg) => sg.genre),
+      },
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Failed to fetch TV show' });
   }
@@ -143,7 +161,7 @@ tvShowsRouter.delete('/:id', async (req: AuthRequest, res: Response): Promise<vo
   }
 });
 
-// PATCH /:id/toggle-featured
+// PATCH /api/admin/tv-shows/:id/toggle-featured
 tvShowsRouter.patch('/:id/toggle-featured', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = getId(req);
@@ -157,7 +175,7 @@ tvShowsRouter.patch('/:id/toggle-featured', async (req: AuthRequest, res: Respon
   }
 });
 
-// PATCH /:id/toggle-trending
+// PATCH /api/admin/tv-shows/:id/toggle-trending
 tvShowsRouter.patch('/:id/toggle-trending', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = getId(req);
@@ -171,6 +189,158 @@ tvShowsRouter.patch('/:id/toggle-trending', async (req: AuthRequest, res: Respon
   }
 });
 
+// ── V3 Seasons & Episodes CRUD ────────────────────────────────────────────
+
+// GET /api/admin/tv-shows/:id/seasons
+tvShowsRouter.get('/:id/seasons', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const id = getId(req);
+    const seasons = await prisma.season.findMany({
+      where: { tvShowId: id },
+      orderBy: { seasonNumber: 'asc' },
+      include: {
+        episodes: { orderBy: { episodeNumber: 'asc' } },
+      },
+    });
+    res.json({ success: true, data: seasons });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to fetch seasons' });
+  }
+});
+
+// POST /api/admin/tv-shows/:id/seasons
+tvShowsRouter.post('/:id/seasons', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const tvShowId = getId(req);
+    const { seasonNumber, title, overview, posterUrl, airDate } = req.body;
+
+    const count = await prisma.season.count({ where: { tvShowId } });
+    const sNum = seasonNumber !== undefined ? Number(seasonNumber) : count + 1;
+
+    const season = await prisma.season.create({
+      data: {
+        tvShowId,
+        seasonNumber: sNum,
+        title: title || `Season ${sNum}`,
+        overview: overview || null,
+        posterUrl: posterUrl || null,
+        airDate: airDate ? new Date(airDate) : null,
+        displayOrder: sNum,
+      },
+      include: { episodes: true },
+    });
+
+    res.status(201).json({ success: true, data: season });
+  } catch (err) {
+    console.error('[Season Create] Error:', err);
+    res.status(500).json({ success: false, error: 'Failed to create season' });
+  }
+});
+
+// PUT /api/admin/tv-shows/:id/seasons/:seasonId
+tvShowsRouter.put('/:id/seasons/:seasonId', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const seasonId = req.params.seasonId as string;
+    const { seasonNumber, title, overview, posterUrl, airDate } = req.body;
+
+    const season = await prisma.season.update({
+      where: { id: seasonId },
+      data: {
+        ...(seasonNumber !== undefined && { seasonNumber: Number(seasonNumber) }),
+        ...(title !== undefined && { title }),
+        ...(overview !== undefined && { overview }),
+        ...(posterUrl !== undefined && { posterUrl }),
+        ...(airDate !== undefined && { airDate: airDate ? new Date(airDate) : null }),
+      },
+      include: { episodes: true },
+    });
+
+    res.json({ success: true, data: season });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to update season' });
+  }
+});
+
+// DELETE /api/admin/tv-shows/:id/seasons/:seasonId
+tvShowsRouter.delete('/:id/seasons/:seasonId', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const seasonId = req.params.seasonId as string;
+    await prisma.season.delete({ where: { id: seasonId } });
+    res.json({ success: true, message: 'Season and episodes deleted' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to delete season' });
+  }
+});
+
+// POST /api/admin/tv-shows/:id/seasons/:seasonId/episodes
+tvShowsRouter.post('/:id/seasons/:seasonId/episodes', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const seasonId = req.params.seasonId as string;
+    const { episodeNumber, title, description, thumbnailUrl, airDate, runtime, videoUrl, status } = req.body;
+
+    const count = await prisma.episode.count({ where: { seasonId } });
+    const epNum = episodeNumber !== undefined ? Number(episodeNumber) : count + 1;
+
+    const episode = await prisma.episode.create({
+      data: {
+        seasonId,
+        episodeNumber: epNum,
+        title: title || `Episode ${epNum}`,
+        description: description || null,
+        thumbnailUrl: thumbnailUrl || null,
+        airDate: airDate ? new Date(airDate) : null,
+        runtime: runtime ? Number(runtime) : null,
+        videoUrl: videoUrl || null,
+        status: status || 'PUBLISHED',
+        displayOrder: epNum,
+      },
+    });
+
+    res.status(201).json({ success: true, data: episode });
+  } catch (err) {
+    console.error('[Episode Create] Error:', err);
+    res.status(500).json({ success: false, error: 'Failed to create episode' });
+  }
+});
+
+// PUT /api/admin/tv-shows/:id/seasons/:seasonId/episodes/:episodeId
+tvShowsRouter.put('/:id/seasons/:seasonId/episodes/:episodeId', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const episodeId = req.params.episodeId as string;
+    const { episodeNumber, title, description, thumbnailUrl, airDate, runtime, videoUrl, status } = req.body;
+
+    const episode = await prisma.episode.update({
+      where: { id: episodeId },
+      data: {
+        ...(episodeNumber !== undefined && { episodeNumber: Number(episodeNumber) }),
+        ...(title !== undefined && { title }),
+        ...(description !== undefined && { description }),
+        ...(thumbnailUrl !== undefined && { thumbnailUrl }),
+        ...(airDate !== undefined && { airDate: airDate ? new Date(airDate) : null }),
+        ...(runtime !== undefined && { runtime: runtime ? Number(runtime) : null }),
+        ...(videoUrl !== undefined && { videoUrl }),
+        ...(status !== undefined && { status }),
+      },
+    });
+
+    res.json({ success: true, data: episode });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to update episode' });
+  }
+});
+
+// DELETE /api/admin/tv-shows/:id/seasons/:seasonId/episodes/:episodeId
+tvShowsRouter.delete('/:id/seasons/:seasonId/episodes/:episodeId', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const episodeId = req.params.episodeId as string;
+    await prisma.episode.delete({ where: { id: episodeId } });
+    res.json({ success: true, message: 'Episode deleted' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to delete episode' });
+  }
+});
+
+// Helper
 async function createAuditLog(req: AuthRequest, action: string, resourceType: string, resourceId: string) {
   if (!req.admin) return;
   const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress || 'unknown';

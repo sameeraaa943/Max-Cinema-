@@ -75,6 +75,13 @@ export const moviesApi = {
   delete: (id: string) => api.delete(`/api/admin/movies/${id}`),
   toggleFeatured: (id: string) => api.patch(`/api/admin/movies/${id}/toggle-featured`),
   toggleTrending: (id: string) => api.patch(`/api/admin/movies/${id}/toggle-trending`),
+  // V3 additions
+  bulkAction: (ids: string[], action: string) =>
+    api.post('/api/admin/movies/bulk-action', { ids, action }),
+  exportMovies: (format: 'json' | 'csv' = 'json') =>
+    api.get('/api/admin/movies/export', { params: { format }, responseType: format === 'csv' ? 'blob' : 'json' }),
+  importMovies: (movies: Record<string, unknown>[]) =>
+    api.post('/api/admin/movies/import', { movies }),
 };
 
 // ── TV Shows ──────────────────────────────────────────────────────────────
@@ -172,3 +179,66 @@ export const tmdbApi = {
 export const healthApi = {
   check: () => api.get('/health'),
 };
+
+// ── V3: Content Center ────────────────────────────────────────────────────
+export const contentCenterApi = {
+  getHealth: () => api.get('/api/admin/content-center/health'),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getIssues: (params?: Record<string, any>) => api.get('/api/admin/content-center/issues', { params }),
+};
+
+// ── V3: Media Library ─────────────────────────────────────────────────────
+export const mediaApi = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  list: (params?: Record<string, any>) => api.get('/api/admin/media', { params }),
+  get: (id: string) => api.get(`/api/admin/media/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/api/admin/media', data),
+  update: (id: string, data: Record<string, unknown>) => api.put(`/api/admin/media/${id}`, data),
+  delete: (id: string) => api.delete(`/api/admin/media/${id}`),
+};
+
+// ── V3: Scheduler ─────────────────────────────────────────────────────────
+export const schedulerApi = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  list: (params?: Record<string, any>) => api.get('/api/admin/scheduler', { params }),
+  get: (id: string) => api.get(`/api/admin/scheduler/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/api/admin/scheduler', data),
+  update: (id: string, data: Record<string, unknown>) => api.put(`/api/admin/scheduler/${id}`, data),
+  delete: (id: string) => api.delete(`/api/admin/scheduler/${id}`),
+  executeNow: (id: string) => api.post(`/api/admin/scheduler/${id}/execute`),
+  cancel: (id: string) => api.post(`/api/admin/scheduler/${id}/cancel`),
+};
+
+// ── V3: System Health ─────────────────────────────────────────────────────
+export const systemApi = {
+  getHealth: () => api.get('/api/admin/system-health'),
+};
+
+// ── V3: Search Analytics ──────────────────────────────────────────────────
+export const searchAnalyticsApi = {
+  getSearches: (period: string) => api.get('/api/admin/analytics/searches', { params: { period } }),
+  getLive: () => api.get('/api/admin/analytics/live'),
+};
+
+// ── V3: Seasons ───────────────────────────────────────────────────────────
+export const seasonsApi = {
+  list: (tvShowId: string) => api.get(`/api/admin/tv-shows/${tvShowId}/seasons`),
+  create: (tvShowId: string, data: Record<string, unknown>) =>
+    api.post(`/api/admin/tv-shows/${tvShowId}/seasons`, data),
+  update: (tvShowId: string, seasonId: string, data: Record<string, unknown>) =>
+    api.put(`/api/admin/tv-shows/${tvShowId}/seasons/${seasonId}`, data),
+  delete: (tvShowId: string, seasonId: string) =>
+    api.delete(`/api/admin/tv-shows/${tvShowId}/seasons/${seasonId}`),
+};
+
+// ── V3: Episodes ──────────────────────────────────────────────────────────
+export const episodesApi = {
+  list: (seasonId: string) => api.get(`/api/admin/seasons/${seasonId}/episodes`),
+  create: (seasonId: string, data: Record<string, unknown>) =>
+    api.post(`/api/admin/seasons/${seasonId}/episodes`, data),
+  update: (seasonId: string, episodeId: string, data: Record<string, unknown>) =>
+    api.put(`/api/admin/seasons/${seasonId}/episodes/${episodeId}`, data),
+  delete: (seasonId: string, episodeId: string) =>
+    api.delete(`/api/admin/seasons/${seasonId}/episodes/${episodeId}`),
+};
+
