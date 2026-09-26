@@ -1,30 +1,14 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Film,
-  Tv,
-  Star,
-  TrendingUp,
-  BookOpen,
-  Home,
-  BarChart2,
-  DollarSign,
-  Settings,
-  ClipboardList,
-  LogOut,
-  ChevronRight,
-  Diamond,
-  X,
+  LayoutDashboard, Film, Tv, Star, TrendingUp, BookOpen, Home,
+  BarChart2, DollarSign, Settings, ClipboardList, LogOut, ChevronRight,
+  Diamond, X,
   // V3 icons
-  ShieldCheck,
-  Image,
-  CalendarClock,
-  Search,
-  Radio,
-  Activity,
-  Code2,
-  Monitor,
-  Layout,
+  ShieldCheck, Image, CalendarClock, Search, Radio, Activity, Code2, Monitor, Layout,
+  // V4 icons  
+  Sparkles, Zap, Bell, Lock, Users, HardDrive, Plug,
+  // V5 icons
+  Globe, MessageSquare, Cpu, GitBranch, UserCog, BellRing,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { authApi } from '../services/api';
@@ -59,6 +43,8 @@ const navSections: { title: string; items: NavItem[] }[] = [
       { icon: ShieldCheck, label: 'Content Health', path: '/content-center' },
       { icon: Image, label: 'Media Library', path: '/media' },
       { icon: CalendarClock, label: 'Scheduler', path: '/scheduler' },
+      { icon: Globe, label: 'Languages', path: '/languages' },
+      { icon: Search, label: 'SEO', path: '/seo' },
     ],
   },
   {
@@ -70,12 +56,40 @@ const navSections: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
+    title: 'AUDIENCE',
+    items: [
+      { icon: Users, label: 'User Accounts', path: '/users' },
+      { icon: MessageSquare, label: 'Reviews', path: '/reviews' },
+      { icon: DollarSign, label: 'Monetization', path: '/monetization' },
+      { icon: Bell, label: 'Push Notifications', path: '/push-notifications' },
+    ],
+  },
+  {
     title: 'INSIGHTS',
     items: [
       { icon: BarChart2, label: 'Analytics', path: '/analytics' },
       { icon: Search, label: 'Search Analytics', path: '/search-analytics' },
       { icon: Radio, label: 'Live Activity', path: '/live' },
       { icon: DollarSign, label: 'Ads', path: '/ads' },
+    ],
+  },
+  {
+    title: 'AI & AUTOMATION',
+    items: [
+      { icon: Cpu, label: 'AI Control', path: '/ai-control' },
+      { icon: Sparkles, label: 'AI Assistant', path: '/ai' },
+      { icon: Zap, label: 'Automation', path: '/automation' },
+      { icon: GitBranch, label: 'Recommendations', path: '/recommendations' },
+    ],
+  },
+  {
+    title: 'OPERATIONS',
+    items: [
+      { icon: BellRing, label: 'Alerts', path: '/alerts' },
+      { icon: Lock, label: 'Security', path: '/security' },
+      { icon: UserCog, label: 'Admin Users', path: '/admin-users' },
+      { icon: HardDrive, label: 'Backups', path: '/backups' },
+      { icon: Plug, label: 'Integrations', path: '/integrations' },
     ],
   },
   {
@@ -245,9 +259,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           style={{ borderTop: '1px solid #242424' }}
         >
           <div className="text-xs" style={{ color: '#8A8A8A' }}>
-            <span className="gold-text font-semibold">v2.0</span>
+            <span className="gold-text font-semibold">v5.0</span>
             <span className="mx-2" style={{ color: '#242424' }}>|</span>
-            Control API
+            Control Platform
           </div>
           <a
             href="https://cinescopecodespactor.netlify.app"

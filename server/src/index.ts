@@ -23,6 +23,14 @@ import { contentCenterRouter } from './routes/contentCenter';
 import { mediaRouter } from './routes/media';
 import { schedulerRouter } from './routes/scheduler';
 import { systemHealthRouter } from './routes/systemHealth';
+// V5 routes
+import languagesRouter from './routes/languages';
+import publicUsersRouter from './routes/publicUsers';
+import reviewsRouter from './routes/reviews';
+import monetizationRouter from './routes/monetization';
+import pushNotificationsRouter from './routes/pushNotifications';
+import seoRouter from './routes/seo';
+import aiControlRouter from './routes/aiControl';
 import { startSchedulerRunner } from './lib/schedulerRunner';
 import { errorHandler } from './middleware/errorHandler';
 import { prisma } from './lib/prisma';
@@ -147,6 +155,13 @@ app.use('/api/admin/content-center', contentCenterRouter);
 app.use('/api/admin/media', mediaRouter);
 app.use('/api/admin/scheduler', schedulerRouter);
 app.use('/api/admin/system', systemHealthRouter);
+app.use('/api/admin/languages', languagesRouter);
+app.use('/api/admin/public-users', publicUsersRouter);
+app.use('/api/admin/reviews', reviewsRouter);
+app.use('/api/admin/monetization', monetizationRouter);
+app.use('/api/admin/push-notifications', pushNotificationsRouter);
+app.use('/api/admin/seo', seoRouter);
+app.use('/api/admin/ai-control', aiControlRouter);
 
 // ── 404 ───────────────────────────────────────────────────────────────────
 app.use((_req, res) => {

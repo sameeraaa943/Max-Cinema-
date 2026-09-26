@@ -19,8 +19,7 @@ export default function PreviewPage() {
   const vp = VIEWPORTS.find(v => v.id === viewport)!;
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-      {/* Header */}
+    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Monitor size={28} color="#D4AF37" />
@@ -39,9 +38,7 @@ export default function PreviewPage() {
         </a>
       </div>
 
-      {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 20 }}>
-        {/* Viewport switcher */}
         <div style={{ display: 'flex', background: '#121212', border: '1px solid #242424', borderRadius: 8, overflow: 'hidden' }}>
           {VIEWPORTS.map(v => (
             <button
@@ -74,12 +71,10 @@ export default function PreviewPage() {
         </button>
       </div>
 
-      {/* Notice */}
       <div style={{ background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: 8, padding: '10px 16px', marginBottom: 16, color: '#D4AF37', fontSize: 12 }}>
         ⚠️ Preview may be blocked by the site's X-Frame-Options policy. Click <strong>Open in New Tab</strong> to view the live site.
       </div>
 
-      {/* iframe container */}
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <div style={{
           width: vp.width,
@@ -101,7 +96,6 @@ export default function PreviewPage() {
         </div>
       </div>
 
-      {/* URL bar */}
       <div style={{ textAlign: 'center', marginTop: 12 }}>
         <span style={{ color: '#242424', fontSize: 12 }}>{PUBLIC_URL}</span>
       </div>

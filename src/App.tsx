@@ -32,6 +32,23 @@ const SystemHealthPage = lazy(() => import('./pages/system-health/index'));
 const DeveloperPage = lazy(() => import('./pages/developer/index'));
 const PreviewPage = lazy(() => import('./pages/preview/index'));
 const HomepageBuilderPage = lazy(() => import('./pages/homepage-builder/index'));
+// V4 pages
+const AiPage = lazy(() => import('./pages/ai/index'));
+const RecommendationsPage = lazy(() => import('./pages/recommendations/index'));
+const AutomationPage = lazy(() => import('./pages/automation/index'));
+const AlertsPage = lazy(() => import('./pages/alerts/index'));
+const SecurityPage = lazy(() => import('./pages/security/index'));
+const AdminUsersPage = lazy(() => import('./pages/admin-users/index'));
+const BackupsPage = lazy(() => import('./pages/backups/index'));
+const IntegrationsPage = lazy(() => import('./pages/integrations/index'));
+// V5 pages
+const AiControlPage = lazy(() => import('./pages/ai-control/index'));
+const UsersPage = lazy(() => import('./pages/users/index'));
+const ReviewsPage = lazy(() => import('./pages/reviews/index'));
+const MonetizationPage = lazy(() => import('./pages/monetization/index'));
+const PushNotificationsPage = lazy(() => import('./pages/push-notifications/index'));
+const SeoPage = lazy(() => import('./pages/seo/index'));
+const LanguagesPage = lazy(() => import('./pages/languages/index'));
 
 
 const queryClient = new QueryClient({
@@ -127,6 +144,23 @@ export default function App() {
                 <Route path="developer" element={<DeveloperPage />} />
                 <Route path="preview" element={<PreviewPage />} />
                 <Route path="homepage-builder" element={<HomepageBuilderPage />} />
+                {/* V4 Routes */}
+                <Route path="ai" element={<AiPage />} />
+                <Route path="recommendations" element={<RecommendationsPage />} />
+                <Route path="automation" element={<AutomationPage />} />
+                <Route path="alerts" element={<AlertsPage />} />
+                <Route path="security" element={<SecurityPage />} />
+                <Route path="admin-users" element={<AdminUsersPage />} />
+                <Route path="backups" element={<BackupsPage />} />
+                <Route path="integrations" element={<IntegrationsPage />} />
+                {/* V5 Routes */}
+                <Route path="ai-control" element={<AiControlPage />} />
+                <Route path="users" element={<UsersPage />} />
+                <Route path="reviews" element={<ReviewsPage />} />
+                <Route path="monetization" element={<MonetizationPage />} />
+                <Route path="push-notifications" element={<PushNotificationsPage />} />
+                <Route path="seo" element={<SeoPage />} />
+                <Route path="languages" element={<LanguagesPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>

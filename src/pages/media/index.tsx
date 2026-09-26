@@ -36,7 +36,6 @@ export default function MediaLibraryPage() {
   const [showModal, setShowModal] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  // Add modal state
   const [form, setForm] = useState({ filename: '', url: '', type: 'IMAGE', alt: '', description: '' });
 
   useEffect(() => {
@@ -68,8 +67,7 @@ export default function MediaLibraryPage() {
   const copyUrl = (url: string) => { navigator.clipboard.writeText(url); toast.success('URL copied!'); };
 
   return (
-    <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-      {/* Header */}
+    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Image size={28} color="#D4AF37" />
@@ -83,7 +81,6 @@ export default function MediaLibraryPage() {
         </button>
       </div>
 
-      {/* Filter bar */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
           <Search size={14} color="#8A8A8A" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
@@ -109,22 +106,19 @@ export default function MediaLibraryPage() {
         </div>
       </div>
 
-      {/* Loading */}
       {isLoading && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
           <Loader2 size={32} color="#D4AF37" style={{ animation: 'spin 1s linear infinite' }} />
         </div>
       )}
 
-      {/* Empty state */}
       {!isLoading && items.length === 0 && (
-        <div style={{ textAlign: 'center', padding: 80 }}>
+        <div style={{ textAlign: 'center', padding: 80, background: '#121212', borderRadius: 12, border: '1px solid #242424' }}>
           <Image size={48} color="#242424" style={{ margin: '0 auto 16px' }} />
-          <p style={{ color: '#8A8A8A' }}>No media assets. Click Upload Media to add your first asset.</p>
+          <p style={{ color: '#8A8A8A' }}>No media assets found. Click Upload Media to add your first asset.</p>
         </div>
       )}
 
-      {/* Grid View */}
       {!isLoading && items.length > 0 && view === 'grid' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
           {items.map((item: any) => (
@@ -142,9 +136,8 @@ export default function MediaLibraryPage() {
                     <Image size={40} color="#242424" />
                   </div>
                 )}
-                {/* Hover overlay */}
                 {hoveredId === item.id && (
-                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                     <button onClick={() => copyUrl(item.url)} style={{ ...btnGold, fontSize: 12, padding: '6px 12px' }}><Copy size={12} /> Copy URL</button>
                     <button onClick={() => window.open(item.url, '_blank')} style={{ ...btnGhost, fontSize: 12, padding: '6px 12px' }}><ExternalLink size={12} /> Open</button>
                     <button onClick={() => deleteMutation.mutate(item.id)} style={{ background: 'rgba(239,68,68,0.2)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: 6, padding: '6px 12px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Trash2 size={12} /> Delete</button>
@@ -160,7 +153,6 @@ export default function MediaLibraryPage() {
         </div>
       )}
 
-      {/* List View */}
       {!isLoading && items.length > 0 && view === 'list' && (
         <div style={cardStyle}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -199,7 +191,6 @@ export default function MediaLibraryPage() {
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', marginTop: 24 }}>
           <button disabled={page === 1} onClick={() => setPage(p => p - 1)} style={{ ...btnGhost, opacity: page === 1 ? 0.4 : 1 }}>Previous</button>
@@ -208,7 +199,6 @@ export default function MediaLibraryPage() {
         </div>
       )}
 
-      {/* Add Modal */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div style={{ ...cardStyle, width: '100%', maxWidth: 500, padding: 28 }}>

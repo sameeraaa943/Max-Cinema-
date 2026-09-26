@@ -242,3 +242,98 @@ export const episodesApi = {
     api.delete(`/api/admin/seasons/${seasonId}/episodes/${episodeId}`),
 };
 
+// ── V4 API Clients ────────────────────────────────────────────────────────────
+export const aiApi = {
+  generateMetadata: (data: any) => api.post('/api/admin/ai/generate-metadata', data),
+  review: (data: any) => api.post('/api/admin/ai/review', data),
+  applyFix: (data: any) => api.post('/api/admin/ai/apply-fix', data),
+  getFeaturedSuggestions: () => api.get('/api/admin/ai/suggestions/featured'),
+  getTrendingSuggestions: () => api.get('/api/admin/ai/suggestions/trending'),
+  translate: (data: any) => api.post('/api/admin/ai/translate', data),
+};
+export const recommendationsApi = {
+  get: (contentId: string) => api.get(`/api/public/recommendations/${contentId}`),
+};
+export const automationApi = {
+  getRules: () => api.get('/api/admin/automation/rules'),
+  createRule: (data: any) => api.post('/api/admin/automation/rules', data),
+  updateRule: (id: string, data: any) => api.put(`/api/admin/automation/rules/${id}`, data),
+  deleteRule: (id: string) => api.delete(`/api/admin/automation/rules/${id}`),
+  triggerRule: (id: string) => api.post(`/api/admin/automation/rules/${id}/trigger`),
+  getRuns: () => api.get('/api/admin/automation/runs'),
+  tmdbSync: (data: any) => api.post('/api/admin/automation/tmdb-sync', data),
+};
+export const alertsApi = {
+  list: () => api.get('/api/admin/alerts'),
+  markRead: (id: string) => api.patch(`/api/admin/alerts/${id}/read`),
+  markAllRead: () => api.post('/api/admin/alerts/mark-all-read'),
+  delete: (id: string) => api.delete(`/api/admin/alerts/${id}`),
+  test: (data: any) => api.post('/api/admin/alerts/test', data),
+};
+export const securityApi = {
+  getOverview: () => api.get('/api/admin/security/overview'),
+  getLogins: () => api.get('/api/admin/security/logins'),
+  getActiveSessions: () => api.get('/api/admin/security/active-sessions'),
+  revokeSession: (data: any) => api.post('/api/admin/security/revoke-session', data),
+};
+export const adminUsersApi = {
+  list: () => api.get('/api/admin/users'),
+  create: (data: any) => api.post('/api/admin/users', data),
+  update: (id: string, data: any) => api.put(`/api/admin/users/${id}`, data),
+  delete: (id: string) => api.delete(`/api/admin/users/${id}`),
+  resetPassword: (id: string, data: any) => api.post(`/api/admin/users/${id}/reset-password`, data),
+};
+export const backupsApi = {
+  list: () => api.get('/api/admin/backups'),
+  create: () => api.post('/api/admin/backups/create'),
+  restore: (data: any) => api.post('/api/admin/backups/restore', data),
+};
+export const integrationsApi = {
+  list: () => api.get('/api/admin/integrations'),
+  test: (service: string) => api.post(`/api/admin/integrations/test/${service}`),
+};
+
+// ── V5 API Clients ────────────────────────────────────────────────────────────
+export const languagesApi = {
+  list: () => api.get('/api/admin/languages'),
+  create: (data: any) => api.post('/api/admin/languages', data),
+  update: (id: string, data: any) => api.put(`/api/admin/languages/${id}`, data),
+  delete: (id: string) => api.delete(`/api/admin/languages/${id}`),
+  getTranslations: (contentType: string, contentId: string) => api.get(`/api/admin/languages/translations/${contentType}/${contentId}`),
+  saveTranslation: (contentType: string, contentId: string, langCode: string, data: any) => api.put(`/api/admin/languages/translations/${contentType}/${contentId}/${langCode}`, data),
+};
+export const publicUsersApi = {
+  list: (params?: any) => api.get('/api/admin/public-users', { params }),
+  stats: () => api.get('/api/admin/public-users/stats'),
+  update: (id: string, data: any) => api.patch(`/api/admin/public-users/${id}`, data),
+  delete: (id: string) => api.delete(`/api/admin/public-users/${id}`),
+};
+export const reviewsApi = {
+  list: (params?: any) => api.get('/api/admin/reviews', { params }),
+  approve: (id: string) => api.patch(`/api/admin/reviews/${id}/approve`),
+  flag: (id: string) => api.patch(`/api/admin/reviews/${id}/flag`),
+  delete: (id: string) => api.delete(`/api/admin/reviews/${id}`),
+};
+export const monetizationApi = {
+  getPlans: () => api.get('/api/admin/monetization/plans'),
+  createPlan: (data: any) => api.post('/api/admin/monetization/plans', data),
+  updatePlan: (id: string, data: any) => api.put(`/api/admin/monetization/plans/${id}`, data),
+  deletePlan: (id: string) => api.delete(`/api/admin/monetization/plans/${id}`),
+  getStats: () => api.get('/api/admin/monetization/stats'),
+};
+export const pushApi = {
+  list: () => api.get('/api/admin/push-notifications'),
+  create: (data: any) => api.post('/api/admin/push-notifications', data),
+  send: (id: string) => api.post(`/api/admin/push-notifications/${id}/send`),
+  delete: (id: string) => api.delete(`/api/admin/push-notifications/${id}`),
+};
+export const seoApi = {
+  list: (params?: any) => api.get('/api/admin/seo', { params }),
+  get: (contentType: string, contentId: string) => api.get(`/api/admin/seo/${contentType}/${contentId}`),
+  save: (contentType: string, contentId: string, data: any) => api.put(`/api/admin/seo/${contentType}/${contentId}`, data),
+  getCoverage: () => api.get('/api/admin/seo/stats/coverage'),
+};
+export const aiControlApi = {
+  command: (command: string) => api.post('/api/admin/ai-control/command', { command }),
+  history: () => api.get('/api/admin/ai-control/history'),
+};

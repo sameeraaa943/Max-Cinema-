@@ -543,3 +543,129 @@ model ScheduledTask {
 }
 
 
+
+// ── V5 Models ────────────────────────────────────────────────────────────────
+
+model Language {
+  id          String   @id @default(cuid())
+  code        String   @unique // en, si, ta, hi, ar, fr, de, es
+  name        String
+  nativeName  String
+  isDefault   Boolean  @default(false)
+  isEnabled   Boolean  @default(true)
+  rtl         Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  translations ContentTranslation[]
+
+  @@map("languages")
+}
+
+model ContentTranslation {
+  id          String   @id @default(cuid())
+  contentType String   // MOVIE | TV_SHOW
+  contentId   String
+  languageCode String
+  title       String?
+  description String?
+  tagline     String?
+  keywords    String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  language    Language @relation(fields: [languageCode], references: [code])
+
+  @@unique([contentType, contentId, languageCode])
+  @@map("content_translations")
+}
+
+model UserAccount {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  name        String?
+  avatar      String?
+  role        String    @default("USER")
+  isActive    Boolean   @default(true)
+  isPremium   Boolean   @default(false)
+  watchlist   Json      @default("[]")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+  reviews     Review[]
+
+  @@map("user_accounts")
+}
+
+model Review {
+  id          String      @id @default(cuid())
+  userId      String
+  user        UserAccount @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contentType String      // MOVIE | TV_SHOW
+  contentId   String
+  rating      Int         // 1-10
+  title       String?
+  body        String?
+  isApproved  Boolean     @default(false)
+  isFlagged   Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([contentType, contentId])
+  @@map("reviews")
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(cuid())
+  name        String
+  price       Float
+  currency    String   @default("USD")
+  period      String   // MONTHLY | YEARLY | LIFETIME
+  features    Json     @default("[]")
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("subscription_plans")
+}
+
+model PushNotification {
+  id             String   @id @default(cuid())
+  title          String
+  body           String
+  imageUrl       String?
+  targetAudience String   @default("ALL") // ALL | PREMIUM | FREE
+  status         String   @default("DRAFT") // DRAFT | SENT | FAILED
+  sentCount      Int      @default(0)
+  createdAt      DateTime @default(now())
+  sentAt         DateTime?
+
+  @@map("push_notifications")
+}
+
+model SeoSettings {
+  id              String   @id @default(cuid())
+  contentType     String
+  contentId       String
+  metaTitle       String?
+  metaDescription String?
+  keywords        String[]
+  ogImage         String?
+  canonicalUrl    String?
+  noIndex         Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+
+  @@unique([contentType, contentId])
+  @@map("seo_settings")
+}
+
+model AiCommand {
+  id          String   @id @default(cuid())
+  command     String
+  response    String
+  actions     Json     @default("[]")
+  status      String   @default("COMPLETED") // COMPLETED | FAILED | PENDING_REVIEW
+  adminId     String?
+  createdAt   DateTime @default(now())
+
+  @@map("ai_commands")
+}

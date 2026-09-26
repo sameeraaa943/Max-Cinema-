@@ -94,8 +94,8 @@ export default function HomepageBuilderPage() {
   };
 
   const moveDown = (idx: number) => {
+    if (idx === sections.length - 1) return;
     setSections(prev => {
-      if (idx === prev.length - 1) return prev;
       const updated = [...prev];
       [updated[idx], updated[idx + 1]] = [updated[idx + 1], updated[idx]];
       return updated;
@@ -104,8 +104,7 @@ export default function HomepageBuilderPage() {
   };
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      {/* Header */}
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Layout size={28} color="#D4AF37" />
@@ -130,7 +129,6 @@ export default function HomepageBuilderPage() {
 
       {!isLoading && (
         <>
-          {/* Site settings */}
           <div style={{ ...cardStyle, padding: 24, marginBottom: 24 }}>
             <h2 style={{ color: '#D4AF37', fontSize: 14, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>Site Settings</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -162,7 +160,6 @@ export default function HomepageBuilderPage() {
             </div>
           </div>
 
-          {/* Sections */}
           <div style={{ ...cardStyle, overflow: 'hidden', marginBottom: 24 }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #242424' }}>
               <h2 style={{ color: '#D4AF37', fontSize: 14, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Page Sections</h2>
@@ -186,7 +183,6 @@ export default function HomepageBuilderPage() {
                   transition: 'all 0.2s ease',
                 }}
               >
-                {/* Icon + Name */}
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ fontSize: 20 }}>{SECTION_ICONS[section.type] || '📄'}</span>
                   <div>
@@ -199,7 +195,6 @@ export default function HomepageBuilderPage() {
                   </div>
                 </div>
 
-                {/* Controls */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <button
                     onClick={() => moveUp(idx)}
@@ -231,7 +226,6 @@ export default function HomepageBuilderPage() {
             ))}
           </div>
 
-          {/* Bottom save */}
           {isDirty && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button style={btnGhost} onClick={() => { if (data) { setSections(data.sections || []); setSiteTitle(data.siteTitle || ''); setTagline(data.tagline || ''); setHeroStyle(data.heroStyle || 'FULL'); setIsDirty(false); } }}>

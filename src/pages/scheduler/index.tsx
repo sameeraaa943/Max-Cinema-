@@ -84,8 +84,7 @@ export default function SchedulerPage() {
   const tasks: any[] = data?.data || [];
 
   return (
-    <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-      {/* Header */}
+    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <CalendarClock size={28} color="#D4AF37" />
@@ -99,7 +98,6 @@ export default function SchedulerPage() {
         </button>
       </div>
 
-      {/* Status tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         {STATUS_TABS.map(s => (
           <button key={s} onClick={() => setStatusFilter(s)} style={{
@@ -110,22 +108,19 @@ export default function SchedulerPage() {
         ))}
       </div>
 
-      {/* Loading */}
       {isLoading && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
           <Loader2 size={32} color="#D4AF37" style={{ animation: 'spin 1s linear infinite' }} />
         </div>
       )}
 
-      {/* Empty state */}
       {!isLoading && tasks.length === 0 && (
-        <div style={{ textAlign: 'center', padding: 80 }}>
+        <div style={{ textAlign: 'center', padding: 80, background: '#121212', borderRadius: 12, border: '1px solid #242424' }}>
           <Clock size={48} color="#242424" style={{ margin: '0 auto 16px' }} />
           <p style={{ color: '#8A8A8A' }}>No scheduled tasks for status: {statusFilter}</p>
         </div>
       )}
 
-      {/* Table */}
       {!isLoading && tasks.length > 0 && (
         <div style={cardStyle}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -183,7 +178,6 @@ export default function SchedulerPage() {
         </div>
       )}
 
-      {/* Delete confirm */}
       {deleteId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ ...cardStyle, padding: 28, maxWidth: 420, width: '90%' }}>
@@ -199,7 +193,6 @@ export default function SchedulerPage() {
         </div>
       )}
 
-      {/* Create modal */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div style={{ ...cardStyle, width: '100%', maxWidth: 480, padding: 28 }}>
