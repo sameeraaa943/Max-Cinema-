@@ -1,215 +1,248 @@
 // File: src/pages/homepage-builder/index.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Layout, Eye, EyeOff, Save, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
+import { Layout, Save, Eye, EyeOff, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { homepageApi } from '../../services/api';
-import LoadingSkeleton from '../../components/ui/LoadingSkeleton';
 
-interface SectionConfig {
-  key: string; label: string; enabled: boolean; itemCount?: number; description?: string;
-}
-
-const SECTION_META: Record<string, { icon: string; description: string }> = {
-  HERO_BANNER:    { icon: '🎬', description: 'Main hero section with featured content' },
-  TRENDING:       { icon: '🔥', description: 'Hottest content right now' },
-  FEATURED:       { icon: '⭐', description: 'Editor\'s pick content' },
-  NEW_RELEASES:   { icon: '🆕', description: 'Latest added movies & shows' },
-  POPULAR_MOVIES: { icon: '🎥', description: 'Most viewed movies' },
-  POPULAR_TV:     { icon: '📺', description: 'Most viewed TV shows' },
-  COLLECTIONS:    { icon: '📚', description: 'Curated content collections' },
-  CUSTOM:         { icon: '✨', description: 'Custom content section' },
+const cardStyle: React.CSSProperties = { background: '#121212', border: '1px solid #242424', borderRadius: 12 };
+const btnGold: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #D4AF37, #C5A028)', color: '#070707', border: 'none',
+  borderRadius: 8, padding: '8px 18px', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+};
+const btnGhost: React.CSSProperties = {
+  background: 'transparent', color: '#8A8A8A', border: '1px solid #242424',
+  borderRadius: 8, padding: '6px 12px', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+};
+const inputStyle: React.CSSProperties = {
+  background: '#0a0a0a', border: '1px solid #242424', borderRadius: 8, color: '#fff',
+  padding: '8px 12px', fontSize: 14, outline: 'none', width: '100%',
 };
 
-const DEFAULT_SECTIONS: SectionConfig[] = [
-  { key: 'HERO_BANNER', label: 'Hero Banner', enabled: true, itemCount: 1 },
-  { key: 'TRENDING', label: 'Trending', enabled: true, itemCount: 10 },
-  { key: 'FEATURED', label: 'Featured', enabled: true, itemCount: 8 },
-  { key: 'NEW_RELEASES', label: 'New Releases', enabled: true, itemCount: 10 },
-  { key: 'POPULAR_MOVIES', label: 'Popular Movies', enabled: true, itemCount: 10 },
-  { key: 'POPULAR_TV', label: 'Popular TV Shows', enabled: true, itemCount: 10 },
-  { key: 'COLLECTIONS', label: 'Collections', enabled: false, itemCount: 6 },
-];
+const SECTION_ICONS: Record<string, string> = {
+  HERO_BANNER: '🎬',
+  FEATURED: '⭐',
+  TRENDING: '🔥',
+  NEW_RELEASES: '🆕',
+  LATEST_MOVIES: '🎬',
+  LATEST_TV: '📺',
+  POPULAR_MOVIES: '🎞️',
+  POPULAR_TV: '📡',
+  COLLECTIONS: '📚',
+  CUSTOM: '✨',
+};
+
+const SECTION_LABELS: Record<string, string> = {
+  HERO_BANNER: 'Hero Banner',
+  FEATURED: 'Featured Content',
+  TRENDING: 'Trending Now',
+  NEW_RELEASES: 'New Releases',
+  LATEST_MOVIES: 'Latest Movies',
+  LATEST_TV: 'Latest TV Shows',
+  POPULAR_MOVIES: 'Popular Movies',
+  POPULAR_TV: 'Popular TV Shows',
+  COLLECTIONS: 'Collections',
+  CUSTOM: 'Custom Section',
+};
 
 export default function HomepageBuilderPage() {
-  const queryClient = useQueryClient();
-  const [sections, setSections] = useState<SectionConfig[]>(DEFAULT_SECTIONS);
-  const [siteTitle, setSiteTitle] = useState('CineScope');
-  const [tagline, setTagline] = useState('Your Ultimate Movie & TV Destination');
-  const [heroStyle, setHeroStyle] = useState<'FULL' | 'SPLIT' | 'MINIMAL'>('FULL');
-  const [hasChanges, setHasChanges] = useState(false);
+  const qc = useQueryClient();
+  const [sections, setSections] = useState<any[]>([]);
+  const [siteTitle, setSiteTitle] = useState('');
+  const [tagline, setTagline] = useState('');
+  const [heroStyle, setHeroStyle] = useState('FULL');
+  const [isDirty, setIsDirty] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['homepage'],
-    queryFn: () => homepageApi.get().then(r => r.data),
+    queryFn: () => homepageApi.get().then(r => r.data.data),
   });
 
   useEffect(() => {
-    if (data?.data) {
-      const d = data.data;
-      if (d.sections?.length) setSections(d.sections);
-      if (d.siteTitle) setSiteTitle(d.siteTitle);
-      if (d.tagline) setTagline(d.tagline);
-      if (d.heroStyle) setHeroStyle(d.heroStyle);
+    if (data) {
+      setSections(data.sections || []);
+      setSiteTitle(data.siteTitle || '');
+      setTagline(data.tagline || '');
+      setHeroStyle(data.heroStyle || 'FULL');
+      setIsDirty(false);
     }
   }, [data]);
 
   const saveMutation = useMutation({
     mutationFn: () => homepageApi.update({ sections, siteTitle, tagline, heroStyle }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['homepage'] });
-      toast.success('Homepage saved and published!');
-      setHasChanges(false);
-    },
-    onError: () => toast.error('Failed to save homepage'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['homepage'] }); toast.success('Homepage settings saved!'); setIsDirty(false); },
+    onError: () => toast.error('Failed to save homepage settings'),
   });
 
-  const markChanged = () => setHasChanges(true);
-
-  const toggleSection = (key: string) => {
-    setSections(prev => prev.map(s => s.key === key ? { ...s, enabled: !s.enabled } : s));
-    markChanged();
+  const toggleSection = (idx: number) => {
+    setSections(prev => {
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], enabled: !updated[idx].enabled };
+      return updated;
+    });
+    setIsDirty(true);
   };
 
-  const moveSection = (index: number, direction: 'up' | 'down') => {
-    const newSections = [...sections];
-    const swapIndex = direction === 'up' ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= newSections.length) return;
-    [newSections[index], newSections[swapIndex]] = [newSections[swapIndex], newSections[index]];
-    setSections(newSections);
-    markChanged();
+  const moveUp = (idx: number) => {
+    if (idx === 0) return;
+    setSections(prev => {
+      const updated = [...prev];
+      [updated[idx - 1], updated[idx]] = [updated[idx], updated[idx - 1]];
+      return updated;
+    });
+    setIsDirty(true);
   };
 
-  const updateItemCount = (key: string, count: number) => {
-    setSections(prev => prev.map(s => s.key === key ? { ...s, itemCount: count } : s));
-    markChanged();
+  const moveDown = (idx: number) => {
+    setSections(prev => {
+      if (idx === prev.length - 1) return prev;
+      const updated = [...prev];
+      [updated[idx], updated[idx + 1]] = [updated[idx + 1], updated[idx]];
+      return updated;
+    });
+    setIsDirty(true);
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white font-cinzel tracking-wide flex items-center gap-2">
-            <Layout size={22} style={{ color: '#D4AF37' }} /> Homepage Builder
-            {hasChanges && <span className="text-sm font-normal" style={{ color: '#D4AF37' }}>● Unsaved changes</span>}
-          </h1>
-          <p className="text-xs mt-1" style={{ color: '#8A8A8A' }}>Drag sections to reorder — changes are published immediately when saved</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Layout size={28} color="#D4AF37" />
+          <div>
+            <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 700, fontFamily: 'Cinzel, serif' }}>
+              Homepage Builder {isDirty && <span style={{ color: '#D4AF37', fontSize: 16 }}>*</span>}
+            </h1>
+            <p style={{ color: '#8A8A8A', fontSize: 13, marginTop: 2 }}>Reorder and toggle sections on your public website</p>
+          </div>
         </div>
-        <button onClick={() => saveMutation.mutate()} disabled={!hasChanges || saveMutation.isPending}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold disabled:opacity-50 self-start"
-          style={{ background: hasChanges ? 'linear-gradient(135deg, #D4AF37, #C5A028)' : '#1A1A1A', color: hasChanges ? '#070707' : '#555', border: hasChanges ? 'none' : '1px solid #242424' }}>
-          {saveMutation.isPending ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+        <button style={{ ...btnGold, opacity: saveMutation.isPending ? 0.7 : 1 }} onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+          {saveMutation.isPending ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={14} />}
           Save Changes
         </button>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-3"><LoadingSkeleton lines={5} height="72px" /></div>
-      ) : (
+      {isLoading && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
+          <Loader2 size={32} color="#D4AF37" style={{ animation: 'spin 1s linear infinite' }} />
+        </div>
+      )}
+
+      {!isLoading && (
         <>
-          {/* Site Settings */}
-          <div className="rounded-xl p-5 space-y-4" style={{ backgroundColor: '#121212', border: '1px solid #242424' }}>
-            <h2 className="text-sm font-semibold text-white">Site Settings</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Site settings */}
+          <div style={{ ...cardStyle, padding: 24, marginBottom: 24 }}>
+            <h2 style={{ color: '#D4AF37', fontSize: 14, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>Site Settings</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: '#8A8A8A' }}>Site Title</label>
-                <input type="text" value={siteTitle} onChange={e => { setSiteTitle(e.target.value); markChanged(); }}
-                  className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none"
-                  style={{ backgroundColor: '#0D0D0D', border: '1px solid #242424', color: '#FFF' }} />
+                <label style={{ color: '#8A8A8A', fontSize: 12, display: 'block', marginBottom: 6 }}>Site Title</label>
+                <input style={inputStyle} value={siteTitle} onChange={e => { setSiteTitle(e.target.value); setIsDirty(true); }} placeholder="CineScope" />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: '#8A8A8A' }}>Tagline</label>
-                <input type="text" value={tagline} onChange={e => { setTagline(e.target.value); markChanged(); }}
-                  className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none"
-                  style={{ backgroundColor: '#0D0D0D', border: '1px solid #242424', color: '#FFF' }} />
+                <label style={{ color: '#8A8A8A', fontSize: 12, display: 'block', marginBottom: 6 }}>Tagline</label>
+                <input style={inputStyle} value={tagline} onChange={e => { setTagline(e.target.value); setIsDirty(true); }} placeholder="Your streaming destination" />
               </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium mb-2" style={{ color: '#8A8A8A' }}>Hero Style</label>
-              <div className="flex gap-2">
-                {(['FULL', 'SPLIT', 'MINIMAL'] as const).map(style => (
-                  <button key={style} onClick={() => { setHeroStyle(style); markChanged(); }}
-                    className="px-4 py-2 rounded-lg text-xs font-medium"
-                    style={{ backgroundColor: heroStyle === style ? '#D4AF37' : '#1A1A1A', color: heroStyle === style ? '#070707' : '#8A8A8A', border: `1px solid ${heroStyle === style ? '#D4AF37' : '#242424'}` }}>
-                    {style}
-                  </button>
+            <div style={{ marginTop: 16 }}>
+              <label style={{ color: '#8A8A8A', fontSize: 12, display: 'block', marginBottom: 8 }}>Hero Style</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {['FULL', 'SPLIT', 'COMPACT'].map(style => (
+                  <button
+                    key={style}
+                    onClick={() => { setHeroStyle(style); setIsDirty(true); }}
+                    style={{
+                      background: heroStyle === style ? 'rgba(212,175,55,0.15)' : '#0a0a0a',
+                      color: heroStyle === style ? '#D4AF37' : '#8A8A8A',
+                      border: `1px solid ${heroStyle === style ? '#D4AF37' : '#242424'}`,
+                      borderRadius: 6, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontWeight: 600,
+                    }}
+                  >{style}</button>
                 ))}
               </div>
             </div>
           </div>
 
           {/* Sections */}
-          <div className="space-y-2">
-            <h2 className="text-sm font-semibold text-white px-1">Homepage Sections</h2>
-            <p className="text-xs px-1" style={{ color: '#8A8A8A' }}>Use the arrows to reorder. Toggle the eye to show/hide on your public site.</p>
+          <div style={{ ...cardStyle, overflow: 'hidden', marginBottom: 24 }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #242424' }}>
+              <h2 style={{ color: '#D4AF37', fontSize: 14, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Page Sections</h2>
+              <p style={{ color: '#8A8A8A', fontSize: 12, marginTop: 2 }}>Use the arrows to reorder sections, toggle the eye to show/hide</p>
+            </div>
 
-            <div className="space-y-2">
-              {sections.map((section, index) => {
-                const meta = SECTION_META[section.key] || { icon: '📄', description: '' };
-                return (
-                  <div key={section.key} className="rounded-xl p-4 transition-all"
-                    style={{ backgroundColor: '#121212', border: `1px solid ${section.enabled ? '#2A2A1A' : '#242424'}`, borderLeft: `3px solid ${section.enabled ? '#D4AF37' : '#333'}` }}>
-                    <div className="flex items-center gap-3">
-                      {/* Move buttons */}
-                      <div className="flex flex-col gap-0.5">
-                        <button onClick={() => moveSection(index, 'up')} disabled={index === 0}
-                          className="p-0.5 rounded disabled:opacity-20" style={{ color: '#8A8A8A' }}>
-                          <ChevronUp size={14} />
-                        </button>
-                        <button onClick={() => moveSection(index, 'down')} disabled={index === sections.length - 1}
-                          className="p-0.5 rounded disabled:opacity-20" style={{ color: '#8A8A8A' }}>
-                          <ChevronDown size={14} />
-                        </button>
-                      </div>
+            {sections.length === 0 && (
+              <div style={{ padding: 40, textAlign: 'center', color: '#8A8A8A' }}>No sections configured</div>
+            )}
 
-                      {/* Icon + Info */}
-                      <div className="text-xl w-8 flex-shrink-0">{meta.icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium" style={{ color: section.enabled ? '#FFF' : '#666' }}>{section.label}</span>
-                          {section.enabled ? (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: '#1A2E00', color: '#86EFAC' }}>VISIBLE</span>
-                          ) : (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: '#1A1A1A', color: '#555' }}>HIDDEN</span>
-                          )}
-                        </div>
-                        <p className="text-xs mt-0.5" style={{ color: '#8A8A8A' }}>{meta.description}</p>
-                      </div>
-
-                      {/* Item count */}
-                      {section.key !== 'HERO_BANNER' && (
-                        <div className="hidden sm:flex items-center gap-2">
-                          <label className="text-[10px]" style={{ color: '#8A8A8A' }}>Items:</label>
-                          <input type="number" min={1} max={50} value={section.itemCount || 10}
-                            onChange={e => updateItemCount(section.key, Number(e.target.value))}
-                            className="w-14 px-2 py-1 rounded text-xs text-center focus:outline-none"
-                            style={{ backgroundColor: '#0D0D0D', border: '1px solid #242424', color: '#CCC' }} />
-                        </div>
-                      )}
-
-                      {/* Toggle */}
-                      <button onClick={() => toggleSection(section.key)}
-                        className="p-2 rounded-lg transition-colors"
-                        style={{ backgroundColor: section.enabled ? '#1A2E00' : '#1A1A1A', color: section.enabled ? '#86EFAC' : '#555', border: `1px solid ${section.enabled ? '#2D5016' : '#242424'}` }}>
-                        {section.enabled ? <Eye size={16} /> : <EyeOff size={16} />}
-                      </button>
+            {sections.map((section: any, idx: number) => (
+              <div
+                key={section.id || idx}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '14px 20px',
+                  borderBottom: '1px solid #1a1a1a',
+                  borderLeft: `3px solid ${section.enabled ? '#D4AF37' : '#242424'}`,
+                  background: section.enabled ? 'rgba(212,175,55,0.03)' : 'transparent',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {/* Icon + Name */}
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 20 }}>{SECTION_ICONS[section.type] || '📄'}</span>
+                  <div>
+                    <div style={{ color: section.enabled ? '#fff' : '#6b7280', fontWeight: 600, fontSize: 14 }}>
+                      {section.title || SECTION_LABELS[section.type] || section.type}
+                    </div>
+                    <div style={{ color: '#8A8A8A', fontSize: 11, marginTop: 1 }}>
+                      {section.type} {section.itemCount ? `· ${section.itemCount} items` : ''}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+
+                {/* Controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button
+                    onClick={() => moveUp(idx)}
+                    disabled={idx === 0}
+                    style={{ ...btnGhost, padding: '4px 8px', opacity: idx === 0 ? 0.3 : 1 }}
+                    title="Move Up"
+                  ><ChevronUp size={14} /></button>
+                  <button
+                    onClick={() => moveDown(idx)}
+                    disabled={idx === sections.length - 1}
+                    style={{ ...btnGhost, padding: '4px 8px', opacity: idx === sections.length - 1 ? 0.3 : 1 }}
+                    title="Move Down"
+                  ><ChevronDown size={14} /></button>
+                  <button
+                    onClick={() => toggleSection(idx)}
+                    style={{
+                      background: section.enabled ? 'rgba(212,175,55,0.1)' : 'rgba(107,114,128,0.1)',
+                      color: section.enabled ? '#D4AF37' : '#6b7280',
+                      border: `1px solid ${section.enabled ? 'rgba(212,175,55,0.3)' : '#242424'}`,
+                      borderRadius: 6, padding: '5px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12,
+                    }}
+                    title={section.enabled ? 'Hide section' : 'Show section'}
+                  >
+                    {section.enabled ? <Eye size={13} /> : <EyeOff size={13} />}
+                    {section.enabled ? 'Visible' : 'Hidden'}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* Save Button (bottom) */}
-          <div className="flex justify-end pb-8">
-            <button onClick={() => saveMutation.mutate()} disabled={!hasChanges || saveMutation.isPending}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
-              style={{ background: hasChanges ? 'linear-gradient(135deg, #D4AF37, #C5A028)' : '#1A1A1A', color: hasChanges ? '#070707' : '#555', border: hasChanges ? 'none' : '1px solid #242424' }}>
-              {saveMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-              Save & Publish
-            </button>
-          </div>
+          {/* Bottom save */}
+          {isDirty && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button style={btnGhost} onClick={() => { if (data) { setSections(data.sections || []); setSiteTitle(data.siteTitle || ''); setTagline(data.tagline || ''); setHeroStyle(data.heroStyle || 'FULL'); setIsDirty(false); } }}>
+                Discard Changes
+              </button>
+              <button style={btnGold} onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+                {saveMutation.isPending ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={14} />}
+                Save Changes
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

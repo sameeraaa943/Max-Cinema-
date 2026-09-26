@@ -1,238 +1,259 @@
 // File: src/pages/media/index.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Image, Upload, Trash2, Search, Grid, List, ExternalLink, Copy, Plus, X, Loader2 } from 'lucide-react';
+import { Image, Upload, Trash2, Search, Grid, List, ExternalLink, Copy, Loader2, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { mediaApi } from '../../services/api';
-import ConfirmDialog from '../../components/ui/ConfirmDialog';
-import LoadingSkeleton from '../../components/ui/LoadingSkeleton';
-import EmptyState from '../../components/ui/EmptyState';
 
-type ViewMode = 'grid' | 'list';
-type MediaTypeFilter = 'ALL' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'OTHER';
-
-const TYPE_COLORS: Record<string, string> = {
-  IMAGE: '#3B82F6', VIDEO: '#8B5CF6', DOCUMENT: '#F59E0B', OTHER: '#6B7280',
+const cardStyle: React.CSSProperties = {
+  background: '#121212', border: '1px solid #242424', borderRadius: 12, overflow: 'hidden', position: 'relative',
+};
+const btnGold: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #D4AF37, #C5A028)', color: '#070707', border: 'none',
+  borderRadius: 8, padding: '8px 18px', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+};
+const btnGhost: React.CSSProperties = {
+  background: 'transparent', color: '#8A8A8A', border: '1px solid #242424',
+  borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+};
+const inputStyle: React.CSSProperties = {
+  background: '#121212', border: '1px solid #242424', borderRadius: 8, color: '#fff',
+  padding: '8px 12px', fontSize: 14, outline: 'none', width: '100%',
 };
 
-interface MediaAsset {
-  id: string; filename: string; url: string; type: string;
-  alt?: string; description?: string; usageCount?: number;
-  width?: number; height?: number; fileSize?: number; createdAt: string;
-}
+const TYPE_COLORS: Record<string, string> = {
+  IMAGE: '#2563eb', VIDEO: '#7c3aed', DOCUMENT: '#d97706', OTHER: '#6b7280',
+};
+const TYPES = ['ALL', 'IMAGE', 'VIDEO', 'DOCUMENT', 'OTHER'];
 
-interface AddFormState {
-  filename: string; url: string; type: string; alt: string; description: string;
-}
-
-export default function MediaPage() {
-  const queryClient = useQueryClient();
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [typeFilter, setTypeFilter] = useState<MediaTypeFilter>('ALL');
-  const [searchInput, setSearchInput] = useState('');
+export default function MediaLibraryPage() {
+  const qc = useQueryClient();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('ALL');
+  const [view, setView] = useState<'grid' | 'list'>('grid');
   const [page, setPage] = useState(1);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState<AddFormState>({ filename: '', url: '', type: 'IMAGE', alt: '', description: '' });
+  const [showModal, setShowModal] = useState(false);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  // Add modal state
+  const [form, setForm] = useState({ filename: '', url: '', type: 'IMAGE', alt: '', description: '' });
 
   useEffect(() => {
-    const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 400);
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 400);
     return () => clearTimeout(t);
-  }, [searchInput]);
+  }, [search]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['media', { search, type: typeFilter, page }],
-    queryFn: () => mediaApi.list({ search: search || undefined, type: typeFilter === 'ALL' ? undefined : typeFilter, page, limit: 20 }).then(r => r.data),
-  });
-
-  const assets: MediaAsset[] = data?.data?.items || [];
-  const total = data?.data?.total || 0;
-  const totalPages = data?.data?.totalPages || 1;
-
-  const createMutation = useMutation({
-    mutationFn: () => mediaApi.create({ filename: form.filename, url: form.url, type: form.type, alt: form.alt, description: form.description }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['media'] }); toast.success('Media asset added'); setShowAddModal(false); setForm({ filename: '', url: '', type: 'IMAGE', alt: '', description: '' }); },
-    onError: () => toast.error('Failed to add media asset'),
+    queryKey: ['media', debouncedSearch, typeFilter, page],
+    queryFn: () => mediaApi.list({ search: debouncedSearch || undefined, type: typeFilter === 'ALL' ? undefined : typeFilter, page, limit: 20 }).then(r => r.data),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => mediaApi.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['media'] }); toast.success('Asset deleted'); setDeleteId(null); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['media'] }); toast.success('Asset deleted'); },
     onError: () => toast.error('Failed to delete asset'),
   });
 
-  const copyUrl = (url: string) => { navigator.clipboard.writeText(url); toast.success('URL copied'); };
+  const createMutation = useMutation({
+    mutationFn: () => mediaApi.create(form),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['media'] }); toast.success('Asset added'); setShowModal(false); setForm({ filename: '', url: '', type: 'IMAGE', alt: '', description: '' }); },
+    onError: () => toast.error('Failed to add asset'),
+  });
 
-  const formatSize = (bytes?: number) => bytes ? `${(bytes / 1024).toFixed(1)} KB` : '—';
+  const items: any[] = data?.data || [];
+  const total: number = data?.total || 0;
+  const totalPages = Math.ceil(total / 20);
+
+  const copyUrl = (url: string) => { navigator.clipboard.writeText(url); toast.success('URL copied!'); };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div style={{ maxWidth: 1280, margin: '0 auto' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white font-cinzel tracking-wide flex items-center gap-2">
-            <Image size={22} style={{ color: '#D4AF37' }} /> Media Library
-          </h1>
-          <p className="text-xs mt-1" style={{ color: '#8A8A8A' }}>Upload and manage images, videos, and documents</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Image size={28} color="#D4AF37" />
+          <div>
+            <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 700, fontFamily: 'Cinzel, serif' }}>Media Library</h1>
+            <p style={{ color: '#8A8A8A', fontSize: 13, marginTop: 2 }}>Manage posters, backdrops, logos and other assets</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setViewMode('grid')} className="p-2 rounded-lg" style={{ backgroundColor: viewMode === 'grid' ? '#D4AF37' : '#1A1A1A', color: viewMode === 'grid' ? '#070707' : '#8A8A8A', border: '1px solid #242424' }}><Grid size={16} /></button>
-          <button onClick={() => setViewMode('list')} className="p-2 rounded-lg" style={{ backgroundColor: viewMode === 'list' ? '#D4AF37' : '#1A1A1A', color: viewMode === 'list' ? '#070707' : '#8A8A8A', border: '1px solid #242424' }}><List size={16} /></button>
-          <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold" style={{ background: 'linear-gradient(135deg, #D4AF37, #C5A028)', color: '#070707' }}>
-            <Plus size={15} /> Upload Media
-          </button>
-        </div>
+        <button style={btnGold} onClick={() => setShowModal(true)}>
+          <Plus size={16} /> Upload Media
+        </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3" style={{ backgroundColor: '#121212', border: '1px solid #242424', borderRadius: 12, padding: '12px 16px' }}>
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#8A8A8A' }} />
-          <input type="text" placeholder="Search by filename..." value={searchInput} onChange={e => setSearchInput(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-lg text-xs focus:outline-none" style={{ backgroundColor: '#0D0D0D', border: '1px solid #242424', color: '#FFF' }} />
+      {/* Filter bar */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+          <Search size={14} color="#8A8A8A" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
+          <input
+            style={{ ...inputStyle, paddingLeft: 32 }}
+            placeholder="Search assets..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
-        <div className="flex gap-1 flex-wrap">
-          {(['ALL', 'IMAGE', 'VIDEO', 'DOCUMENT', 'OTHER'] as MediaTypeFilter[]).map(t => (
-            <button key={t} onClick={() => { setTypeFilter(t); setPage(1); }}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium"
-              style={{ backgroundColor: typeFilter === t ? '#D4AF37' : '#1A1A1A', color: typeFilter === t ? '#070707' : '#8A8A8A', border: '1px solid #242424' }}>
-              {t}
-            </button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {TYPES.map(t => (
+            <button key={t} onClick={() => { setTypeFilter(t); setPage(1); }} style={{
+              background: typeFilter === t ? '#D4AF37' : '#121212',
+              color: typeFilter === t ? '#070707' : '#8A8A8A',
+              border: '1px solid #242424', borderRadius: 6, padding: '6px 12px', fontSize: 12, cursor: 'pointer', fontWeight: 600,
+            }}>{t}</button>
           ))}
         </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button onClick={() => setView('grid')} style={{ ...btnGhost, padding: '8px 10px', color: view === 'grid' ? '#D4AF37' : '#8A8A8A', borderColor: view === 'grid' ? '#D4AF37' : '#242424' }}><Grid size={16} /></button>
+          <button onClick={() => setView('list')} style={{ ...btnGhost, padding: '8px 10px', color: view === 'list' ? '#D4AF37' : '#8A8A8A', borderColor: view === 'list' ? '#D4AF37' : '#242424' }}><List size={16} /></button>
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#121212', border: '1px solid #242424' }}>
-        {isLoading ? (
-          <div className="p-6"><LoadingSkeleton lines={4} height="60px" /></div>
-        ) : assets.length === 0 ? (
-          <EmptyState title="No media assets" description="Click Upload Media to add your first asset." icon={Image} action={{ label: 'Upload Media', onClick: () => setShowAddModal(true) }} />
-        ) : viewMode === 'grid' ? (
-          <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-            {assets.map(asset => (
-              <div key={asset.id} className="group relative rounded-xl overflow-hidden" style={{ backgroundColor: '#0D0D0D', border: '1px solid #1E1E1E', aspectRatio: '1' }}>
-                {asset.type === 'IMAGE' ? (
-                  <img src={asset.url} alt={asset.alt || asset.filename} className="w-full h-full object-cover" onError={e => (e.target as HTMLElement).style.display = 'none'} />
+      {/* Loading */}
+      {isLoading && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
+          <Loader2 size={32} color="#D4AF37" style={{ animation: 'spin 1s linear infinite' }} />
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && items.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 80 }}>
+          <Image size={48} color="#242424" style={{ margin: '0 auto 16px' }} />
+          <p style={{ color: '#8A8A8A' }}>No media assets. Click Upload Media to add your first asset.</p>
+        </div>
+      )}
+
+      {/* Grid View */}
+      {!isLoading && items.length > 0 && view === 'grid' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
+          {items.map((item: any) => (
+            <div
+              key={item.id}
+              style={cardStyle}
+              onMouseEnter={() => setHoveredId(item.id)}
+              onMouseLeave={() => setHoveredId(null)}
+            >
+              <div style={{ height: 140, background: '#1a1a1a', overflow: 'hidden', position: 'relative' }}>
+                {item.type === 'IMAGE' ? (
+                  <img src={item.url} alt={item.alt || item.filename} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center" style={{ color: TYPE_COLORS[asset.type] || '#555' }}>
-                    <Upload size={28} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                    <Image size={40} color="#242424" />
                   </div>
                 )}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2" style={{ backgroundColor: 'rgba(7,7,7,0.85)' }}>
-                  <span className="text-[10px] text-center px-1 truncate w-full text-white">{asset.filename}</span>
-                  <div className="flex gap-1">
-                    <button onClick={() => copyUrl(asset.url)} className="p-1.5 rounded" style={{ backgroundColor: '#1A1A1A', color: '#D4AF37' }}><Copy size={12} /></button>
-                    <button onClick={() => window.open(asset.url, '_blank')} className="p-1.5 rounded" style={{ backgroundColor: '#1A1A1A', color: '#8A8A8A' }}><ExternalLink size={12} /></button>
-                    <button onClick={() => setDeleteId(asset.id)} className="p-1.5 rounded" style={{ backgroundColor: '#3D0000', color: '#FF6666' }}><Trash2 size={12} /></button>
+                {/* Hover overlay */}
+                {hoveredId === item.id && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <button onClick={() => copyUrl(item.url)} style={{ ...btnGold, fontSize: 12, padding: '6px 12px' }}><Copy size={12} /> Copy URL</button>
+                    <button onClick={() => window.open(item.url, '_blank')} style={{ ...btnGhost, fontSize: 12, padding: '6px 12px' }}><ExternalLink size={12} /> Open</button>
+                    <button onClick={() => deleteMutation.mutate(item.id)} style={{ background: 'rgba(239,68,68,0.2)', color: '#ef4444', border: '1px solid #ef4444', borderRadius: 6, padding: '6px 12px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Trash2 size={12} /> Delete</button>
                   </div>
-                </div>
-                <div className="absolute top-1 left-1 px-1 py-0.5 rounded text-[9px] font-medium" style={{ backgroundColor: TYPE_COLORS[asset.type] || '#555', color: '#FFF' }}>{asset.type}</div>
+                )}
               </div>
-            ))}
-          </div>
-        ) : (
-          <table className="w-full text-left">
+              <div style={{ padding: 10 }}>
+                <span style={{ background: TYPE_COLORS[item.type] || '#6b7280', color: '#fff', borderRadius: 4, padding: '2px 6px', fontSize: 10, fontWeight: 700 }}>{item.type}</span>
+                <p style={{ color: '#fff', fontSize: 12, marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.filename}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* List View */}
+      {!isLoading && items.length > 0 && view === 'list' && (
+        <div style={cardStyle}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr className="text-[11px] font-semibold uppercase tracking-wider border-b" style={{ backgroundColor: '#0D0D0D', color: '#8A8A8A', borderColor: '#242424' }}>
-                <th className="py-3 px-4">Preview</th>
-                <th className="py-3 px-4">Filename</th>
-                <th className="py-3 px-4">Type</th>
-                <th className="py-3 px-4">Size</th>
-                <th className="py-3 px-4">Usage</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+              <tr style={{ borderBottom: '1px solid #242424' }}>
+                {['Preview', 'Filename', 'Type', 'URL', 'Actions'].map(h => (
+                  <th key={h} style={{ textAlign: 'left', padding: '12px 16px', color: '#8A8A8A', fontSize: 12, fontWeight: 600 }}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y text-xs" style={{ borderColor: '#1F1F1F' }}>
-              {assets.map(asset => (
-                <tr key={asset.id} className="hover:bg-white/[0.02]">
-                  <td className="py-2 px-4">
-                    {asset.type === 'IMAGE' ? <img src={asset.url} alt={asset.filename} className="w-10 h-10 object-cover rounded" /> : <div className="w-10 h-10 rounded flex items-center justify-center" style={{ backgroundColor: '#1A1A1A', color: TYPE_COLORS[asset.type] || '#555' }}><Upload size={16} /></div>}
+            <tbody>
+              {items.map((item: any) => (
+                <tr key={item.id} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                  <td style={{ padding: '10px 16px' }}>
+                    {item.type === 'IMAGE'
+                      ? <img src={item.url} alt={item.filename} style={{ width: 48, height: 36, objectFit: 'cover', borderRadius: 4 }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      : <div style={{ width: 48, height: 36, background: '#1a1a1a', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Image size={16} color="#242424" /></div>
+                    }
                   </td>
-                  <td className="py-2 px-4 max-w-xs truncate" style={{ color: '#CCC' }}>{asset.filename}</td>
-                  <td className="py-2 px-4"><span className="px-2 py-0.5 rounded text-[10px]" style={{ backgroundColor: TYPE_COLORS[asset.type] + '22', color: TYPE_COLORS[asset.type] }}>{asset.type}</span></td>
-                  <td className="py-2 px-4" style={{ color: '#8A8A8A' }}>{formatSize(asset.fileSize)}</td>
-                  <td className="py-2 px-4" style={{ color: '#8A8A8A' }}>{asset.usageCount ?? 0} uses</td>
-                  <td className="py-2 px-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => copyUrl(asset.url)} className="p-1.5 rounded" style={{ color: '#D4AF37' }}><Copy size={14} /></button>
-                      <button onClick={() => window.open(asset.url, '_blank')} className="p-1.5 rounded" style={{ color: '#8A8A8A' }}><ExternalLink size={14} /></button>
-                      <button onClick={() => setDeleteId(asset.id)} className="p-1.5 rounded" style={{ color: '#FF6666' }}><Trash2 size={14} /></button>
+                  <td style={{ padding: '10px 16px', color: '#fff', fontSize: 13 }}>{item.filename}</td>
+                  <td style={{ padding: '10px 16px' }}>
+                    <span style={{ background: TYPE_COLORS[item.type] || '#6b7280', color: '#fff', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{item.type}</span>
+                  </td>
+                  <td style={{ padding: '10px 16px', color: '#8A8A8A', fontSize: 12, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.url}</td>
+                  <td style={{ padding: '10px 16px' }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => copyUrl(item.url)} style={{ ...btnGhost, padding: '4px 8px', fontSize: 11 }}><Copy size={12} /></button>
+                      <button onClick={() => window.open(item.url, '_blank')} style={{ ...btnGhost, padding: '4px 8px', fontSize: 11 }}><ExternalLink size={12} /></button>
+                      <button onClick={() => deleteMutation.mutate(item.id)} style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, padding: '4px 8px', fontSize: 11, cursor: 'pointer' }}><Trash2 size={12} /></button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
+        </div>
+      )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t text-xs" style={{ borderColor: '#242424', color: '#8A8A8A' }}>
-            <span>{total} assets</span>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 rounded border disabled:opacity-30" style={{ border: '1px solid #242424' }}>Prev</button>
-              <span>{page} / {totalPages}</span>
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-3 py-1.5 rounded border disabled:opacity-30" style={{ border: '1px solid #242424' }}>Next</button>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', marginTop: 24 }}>
+          <button disabled={page === 1} onClick={() => setPage(p => p - 1)} style={{ ...btnGhost, opacity: page === 1 ? 0.4 : 1 }}>Previous</button>
+          <span style={{ color: '#8A8A8A', fontSize: 13 }}>Page {page} of {totalPages}</span>
+          <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} style={{ ...btnGhost, opacity: page === totalPages ? 0.4 : 1 }}>Next</button>
+        </div>
+      )}
 
       {/* Add Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }} onClick={() => setShowAddModal(false)}>
-          <div className="w-full max-w-md rounded-2xl p-6 space-y-4" style={{ backgroundColor: '#121212', border: '1px solid #242424' }} onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-white font-semibold">Add Media Asset</h3>
-              <button onClick={() => setShowAddModal(false)} style={{ color: '#8A8A8A' }}><X size={18} /></button>
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ ...cardStyle, width: '100%', maxWidth: 500, padding: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 700 }}>Add Media Asset</h2>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#8A8A8A', cursor: 'pointer' }}><X size={20} /></button>
             </div>
-            {[
-              { label: 'Filename *', key: 'filename', placeholder: 'movie-poster.jpg' },
-              { label: 'URL *', key: 'url', placeholder: 'https://...' },
-              { label: 'Alt Text', key: 'alt', placeholder: 'Descriptive alt text' },
-            ].map(f => (
-              <div key={f.key}>
-                <label className="block text-xs font-medium mb-1" style={{ color: '#8A8A8A' }}>{f.label}</label>
-                <input type="text" placeholder={f.placeholder} value={form[f.key as keyof AddFormState]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none" style={{ backgroundColor: '#0D0D0D', border: '1px solid #242424', color: '#FFF' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {[
+                { label: 'Filename *', key: 'filename', placeholder: 'poster.jpg' },
+                { label: 'URL *', key: 'url', placeholder: 'https://...' },
+                { label: 'Alt Text', key: 'alt', placeholder: 'Alternative text' },
+                { label: 'Description', key: 'description', placeholder: 'Optional description' },
+              ].map(({ label, key, placeholder }) => (
+                <div key={key}>
+                  <label style={{ color: '#8A8A8A', fontSize: 12, display: 'block', marginBottom: 4 }}>{label}</label>
+                  <input style={inputStyle} placeholder={placeholder} value={(form as any)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
+                </div>
+              ))}
+              <div>
+                <label style={{ color: '#8A8A8A', fontSize: 12, display: 'block', marginBottom: 4 }}>Type</label>
+                <select style={{ ...inputStyle }} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+                  {['IMAGE', 'VIDEO', 'DOCUMENT', 'OTHER'].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
-            ))}
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: '#8A8A8A' }}>Type</label>
-              <select value={form.type} onChange={e => setForm(prev => ({ ...prev, type: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none" style={{ backgroundColor: '#0D0D0D', border: '1px solid #242424', color: '#FFF' }}>
-                {['IMAGE', 'VIDEO', 'DOCUMENT', 'OTHER'].map(t => <option key={t}>{t}</option>)}
-              </select>
             </div>
             {form.url && form.type === 'IMAGE' && (
-              <div className="rounded-lg overflow-hidden" style={{ maxHeight: 120 }}>
-                <img src={form.url} alt="preview" className="w-full h-full object-contain" style={{ maxHeight: 120 }} />
+              <div style={{ marginTop: 12 }}>
+                <img src={form.url} alt="preview" style={{ maxHeight: 120, borderRadius: 8, objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               </div>
             )}
-            <div className="flex gap-3 justify-end pt-2">
-              <button onClick={() => setShowAddModal(false)} className="px-4 py-2 rounded-lg text-xs" style={{ backgroundColor: '#1A1A1A', border: '1px solid #242424', color: '#8A8A8A' }}>Cancel</button>
-              <button onClick={() => createMutation.mutate()} disabled={!form.filename || !form.url || createMutation.isPending}
-                className="px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg, #D4AF37, #C5A028)', color: '#070707' }}>
-                {createMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />} Add Asset
+            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+              <button onClick={() => setShowModal(false)} style={{ ...btnGhost, flex: 1, justifyContent: 'center' }}>Cancel</button>
+              <button
+                onClick={() => createMutation.mutate()}
+                disabled={!form.filename || !form.url || createMutation.isPending}
+                style={{ ...btnGold, flex: 1, justifyContent: 'center', opacity: (!form.filename || !form.url) ? 0.5 : 1 }}
+              >
+                {createMutation.isPending ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={14} />}
+                Add Asset
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <ConfirmDialog
-        isOpen={!!deleteId}
-        title="Delete Asset"
-        message="Are you sure you want to delete this media asset? If it's still referenced, content may break."
-        confirmLabel="Delete Asset"
-        danger
-        onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
-        onCancel={() => setDeleteId(null)}
-        isLoading={deleteMutation.isPending}
-      />
     </div>
   );
 }
