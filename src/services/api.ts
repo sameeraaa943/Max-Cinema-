@@ -211,7 +211,7 @@ export const schedulerApi = {
 
 // ── V3: System Health ─────────────────────────────────────────────────────
 export const systemApi = {
-  getHealth: () => api.get('/api/admin/system-health'),
+  getHealth: () => api.get('/api/admin/system'),
 };
 
 // ── V3: Search Analytics ──────────────────────────────────────────────────
@@ -342,7 +342,7 @@ export const aiControlApi = {
 export const networkPinsApi = {
   list: (params?: any) => api.get('/api/admin/network-pins', { params }),
   create: (data: any) => api.post('/api/admin/network-pins', data),
+  toggle: (id: string) => api.patch(`/api/admin/network-pins/${id}/toggle`),
   update: (id: string, data: any) => api.put(`/api/admin/network-pins/${id}`, data),
   delete: (id: string) => api.delete(`/api/admin/network-pins/${id}`),
 };
-

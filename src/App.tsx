@@ -49,7 +49,8 @@ const MonetizationPage = lazy(() => import('./pages/monetization/index'));
 const PushNotificationsPage = lazy(() => import('./pages/push-notifications/index'));
 const SeoPage = lazy(() => import('./pages/seo/index'));
 const LanguagesPage = lazy(() => import('./pages/languages/index'));
-
+// V5.1 pages
+const NetworkPinsPage = lazy(() => import('./pages/network-pins/index'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -161,6 +162,8 @@ export default function App() {
                 <Route path="push-notifications" element={<PushNotificationsPage />} />
                 <Route path="seo" element={<SeoPage />} />
                 <Route path="languages" element={<LanguagesPage />} />
+                {/* V5.1 Routes */}
+                <Route path="network-pins" element={<NetworkPinsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>

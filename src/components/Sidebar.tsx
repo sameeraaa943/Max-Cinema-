@@ -9,6 +9,8 @@ import {
   Sparkles, Zap, Bell, Lock, Users, HardDrive, Plug,
   // V5 icons
   Globe, MessageSquare, Cpu, GitBranch, UserCog, BellRing,
+  // V5.1 icons
+  Pin,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { authApi } from '../services/api';
@@ -90,6 +92,7 @@ const navSections: { title: string; items: NavItem[] }[] = [
       { icon: UserCog, label: 'Admin Users', path: '/admin-users' },
       { icon: HardDrive, label: 'Backups', path: '/backups' },
       { icon: Plug, label: 'Integrations', path: '/integrations' },
+      { icon: Pin, label: 'Network Pins', path: '/network-pins' },
     ],
   },
   {
